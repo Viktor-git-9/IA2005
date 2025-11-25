@@ -148,25 +148,25 @@ ALLOCATE( x0(nhypo), y0(nhypo) )
 !
 ! RESPONSE FUNCTION
 !
-p000 = ker31s(0.0d0, 0.0d0, 0.0d0, 0.0d0, facbiem)
-do k = 1, itmx
-  do idata=1, ndata1*ndata2
-    zresp(idata) = cmplx(0.0d0, 0.0d0)
+p000 = ker31s(0.0d0, 0.0d0, 0.0d0, 0.0d0, facbiem) ! get reference value of the Kernel at the origin
+do k = 1, itmx ! loop over each time step
+  do idata=1, ndata1*ndata2 ! set complex response array zresp (1D array storing all 2D grid points)
+    zresp(idata) = cmplx(0.0d0, 0.0d0) ! reset to 0 for each time step
   enddo
-  do i = 1-nmax, nmax-1
-    ix = i + 1
-    if(i.lt.0)  ix = ix + ndata1
-    do j = 1-nmax, nmax-1
-      piece1 = ker31s(dble(i), dble(j), 0.d0, dble(k), facbiem)
+  do i = 1-nmax, nmax-1 ! loop over first spatial dimension
+    ix = i + 1 ! periodic index creation (ask Hideo!)
+    if(i.lt.0)  ix = ix + ndata1 ! for negative values of i, shift into positive index values
+    do j = 1-nmax, nmax-1 ! inner loop over second spatial dimension
+      piece1 = ker31s(dble(i), dble(j), 0.d0, dble(k), facbiem) ! evaluate kernel at location (i, j, 0), time step k
       iy = j + 1
-      if(j.lt.0) iy = iy + ndata2
-      idata = ix + (iy-1)*ndata1
-      zresp(idata) = cmplx(piece1, 0.0d0)
+      if(j.lt.0) iy = iy + ndata2 ! periodic indexing for j (index in y-direction)
+      idata = ix + (iy-1)*ndata1 ! map 2D index (ix, iy) to 1D vector (to fill zresp)
+      zresp(idata) = cmplx(piece1, 0.0d0) ! fill zresp with complex numbers with imaginary part 0 -> builds spatial kernel at time step k
     enddo
   enddo
-  call fourn(zresp, ndata, 2, 1)
+  call fourn(zresp, ndata, 2, 1) ! call 2D fourier transform routine for zresp
   do idata=1, ndata1*ndata2
-    zker(idata, k) = zresp(idata)
+    zker(idata, k) = zresp(idata) ! store fourier transformed Green's function for all time steps!
   enddo
 enddo
 
@@ -208,30 +208,31 @@ do isim = isim0, isim0
 !!	
 !! ITERATION OF STAGE
 !!
-  STAGE: do iter = 0, npower
+  STAGE: do iter = 0, npower ! loop over different scales
     kmax = itmx
-    ns = nscale**iter
+    ns = nscale**iter ! scale factor determines how many original grid cells are aggregated into one cell. nscale = 4 by default
 
 ! RENORMALIZATION
-    nmax2 = nmax*nscale**iter
-    do i = 1, nmax
-      i0 = ixmax/2 - nmax2/2 + ns*(i-1) + 1
+    nmax2 = nmax*nscale**iter ! nmax: number of grid cells in coarse grid, nmax2: "physical" size of region that coarse grid spans, in elementary grid cells
+    ! remember: nmax2 = nmax * ns
+    do i = 1, nmax ! loop over all grid cells in coarse grid, in x direction
+      i0 = ixmax/2 - nmax2/2 + ns*(i-1) + 1 ! find x-index of upper left corner of the coarse cell with index (i,j), in terms of elementary grid cells
       do j = 1, nmax
-        j0 = ixmax/2 - nmax2/2 + ns*(j-1) + 1
-        dc(i,j) = 0.0d0
+        j0 = ixmax/2 - nmax2/2 + ns*(j-1) + 1 ! find y-index of upper left corner of the coarse cell with index (i,j), in terms of elementary grid cells
+        dc(i,j) = 0.0d0 ! initialize coarse grid value for fracture energy
         do i1 = 1, ns
           do j1 = 1, ns
-            ix = i0 + i1 - 1 + int(x0(ihypo) - (ixmax+1)/2.)
-            if(ix.lt.1) ix = ixmax + ix
+            ix = i0 + i1 - 1 + int(x0(ihypo) - (ixmax+1)/2.) ! shift center of coarse graining step to hypocenter location, get proper x-index in terms of elementary cells
+            if(ix.lt.1) ix = ixmax + ix ! periodic boundary conditions?
             if(ix.gt.ixmax) ix =  ix - ixmax
-            iy = j0 + j1 - 1 + int(y0(ihypo) - (ixmax+1)/2.)
-            if(iy.lt.1) iy = ixmax + iy
+            iy = j0 + j1 - 1 + int(y0(ihypo) - (ixmax+1)/2.) ! shift center of coarse graining step to hypocenter location, get proper x-index in terms of elementary cells
+            if(iy.lt.1) iy = ixmax + iy ! periodic boundary conditions?
             if(iy.gt.ixmax) iy =  iy - ixmax
 
-            dc(i,j) = dc(i,j) + dble(dcorg(ix, iy))
+            dc(i,j) = dc(i,j) + dble(dcorg(ix, iy)) ! now, sum up contributions from all elementary cells in coarse grid cell and...
           enddo
         enddo
-        dc(i,j) = dc(i,j)/(ns**2)
+        dc(i,j) = dc(i,j)/(ns**2) ! average them using the count of elementary cells in said grid cell!
       enddo
     enddo
 
@@ -311,7 +312,7 @@ do isim = isim0, isim0
 
         do idata=1, ndata1*ndata2
           zans(idata) = (0.0d0, 0.0d0)
-          do n=1, k-1
+          do n=1, k-1 ! convolution
             zans(idata) = zans(idata) +  &
 		zker(idata, k-n)*zvel(idata, n)
           enddo
