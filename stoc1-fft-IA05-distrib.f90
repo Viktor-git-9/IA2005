@@ -93,7 +93,7 @@ ALLOCATE( dcorg(ixmax, ixmax) )
 
 !
 ! CREATING DC
-!
+! The following section creates the fractal asperity map.
 ! to be fixed (-411) for obtaining the same result as case1-1
         idum = -411
         dcmax = dc0*nscale**(npower + 1)
@@ -237,167 +237,167 @@ do isim = isim0, isim0
     enddo
 
 ! INITIALIZATION OF PARAMETERS
-    vel = 0.0d0
-    smrate = 0.0d0
+    vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
+    smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
-    do i = 1, nmax
-      do j = 1, nmax
-        w(i,j) = 0.0d0
-        tau0(i,j) = t0
-        tp(i,j) = tp0
-        tr(i,j) = tr0
-        dc(i,j) = dc(i,j)/ns
-        sigma(i,j) = tp(i,j)
-        a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j)
-        iv(i,j) = 0
-	irup(i,j) = -1
+    do i = 1, nmax ! loop over all x-positions
+      do j = 1, nmax ! loop over all y-positions
+        w(i,j) = 0.0d0 ! time integrated slip, set to 0
+        tau0(i,j) = t0 ! unclear
+        tp(i,j) = tp0 ! peak strength parameter for cell, set to uniform tp0
+        tr(i,j) = tr0 ! residual strength after failure, uniform tr0
+        dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
+        sigma(i,j) = tp(i,j) ! current shear strength?
+        a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! slope of linear slip-weakening law
+        iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
+	irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
         
-        if (iter.eq.0) then
-          rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds
-          if ( rad.le.rini ) then
-            tp(i,j) = 0.0d0
-            dc(i,j) = 0.0d0
-            a(i,j) = 0.0d0
-            sigma(i,j) = tp(i,j)
-            iv(i,j) = 2
+        if (iter.eq.0) then ! first rupture initiation if program is at first scale stage!
+          rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds ! get distance to hypocenter for current cell
+          if ( rad.le.rini ) then ! if distance is smaller than initialization radius:
+            tp(i,j) = 0.0d0 ! set cell strength to zero
+            dc(i,j) = 0.0d0 ! set rupture energy to zero
+            a(i,j) = 0.0d0 ! set slope of slip weakening to zero
+            sigma(i,j) = tp(i,j) ! set shear strength to zero
+            iv(i,j) = 2 ! set state variable to "failed!" -> rupture now has initialized at this cell!
 	  endif
 	endif
       enddo
     enddo
 
-    if( iter.ne.0 ) then
+    if( iter.ne.0 ) then ! after first scale stage:
       kmax = itmx
       if( iter.eq.npower) kmax = itmx
-      kmin = itmx1/nscale
+      kmin = itmx1/nscale ! this has to do with continuing the calculation at a certain time step after changing scales, I think
 
 !    do k = 1, itmx
-      do k = 1, nscale*(itmx1/nscale)
+      do k = 1, nscale*(itmx1/nscale) ! maybe transfer results from previous finer scale to coarser scale? ask Hideo
         n = (k-1)/nscale + 1
         do i = 1, nmax
-          l = (i-1)/nscale + 1 + (nscale-1)*nmax/(2*nscale) 
+          l = (i-1)/nscale + 1 + (nscale-1)*nmax/(2*nscale) ! mapping from (i,j,k) indices to (l,m,n) indices
           do j = 1, nmax
             m = (j-1)/nscale + 1 + (nscale-1)*nmax/(2*nscale)
             if( vel2(i,j,k).ne.0. )then
               vel(l,m,n) = vel(l,m,n) + &
-		vel2(i,j,k)/(nscale*nscale*nscale)
+		vel2(i,j,k)/(nscale*nscale*nscale) ! transfer slip velocities temporarily saved in vel2 (see below) to new indices
             endif
           enddo
         enddo
       enddo
     endif
 
-    icheck = 0
-    itmx1 = kmax
-    smoment = 0.0d0
+    icheck = 0 ! later used to check if rupture reached domain boundaries
+    itmx1 = kmax ! effective time limit for current iteration stage
+    smoment = 0.0d0 ! seismic moment will be accumulated in smoment(k)
 
 ! ITERATION OF TIME
-    TIME: do k = 1, kmax
-      if( mod(k, 20).eq.0 ) write(6,'(a20, 3i5)') "SIMULATION", ihypo, iter, k
-      icheck2 = 0
+    TIME: do k = 1, kmax ! this is the main time loop, central piece of this code!!!
+      if( mod(k, 20).eq.0 ) write(6,'(a20, 3i5)') "SIMULATION", ihypo, iter, k ! write hypocenter location, scale stage, and time step to terminal
+      icheck2 = 0 ! tracks if any cell is slipping at current time-step
 
-      if ( k.ne.1 ) then
-        do idata=1, ndata1*ndata2
-          zdata(idata) = cmplx(0.0d0, 0.0d0)
+      if ( k.ne.1 ) then ! if the first time step has passed...
+        do idata=1, ndata1*ndata2 ! ... prepare to compute convolution with velocity history via FFT
+          zdata(idata) = cmplx(0.0d0, 0.0d0) ! velocity history will be stored here
         enddo
         do j = 1, nmax
           do i = 1, nmax
-            idata = i + (j-1)*ndata1
-            zdata(idata) = cmplx(dble(vel(i,j,k-1)), 0.0d0)
+            idata = i + (j-1)*ndata1 ! transform (i,j) to single index for 1D vector
+            zdata(idata) = cmplx(dble(vel(i,j,k-1)), 0.0d0) ! fill zdata with slip velocities from previous time step
           enddo
         enddo
-        call fourn(zdata, ndata, 2, 1)
+        call fourn(zdata, ndata, 2, 1) ! now, run FFT with slip velo history
         do idata=1, ndata1*ndata2
-          zvel(idata, k-1) = zdata(idata)
+          zvel(idata, k-1) = zdata(idata) ! zvel contains FFT results for all time steps
         enddo
 
         do idata=1, ndata1*ndata2
-          zans(idata) = (0.0d0, 0.0d0)
-          do n=1, k-1 ! convolution
+          zans(idata) = (0.0d0, 0.0d0) ! set zans to 0 
+          do n=1, k-1 ! this is the actual convolution, carried out over all previous time steps -> over the full slip velo history
             zans(idata) = zans(idata) +  &
-		zker(idata, k-n)*zvel(idata, n)
+		zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
           enddo
         enddo
-        call fourn(zans, ndata, 2, -1)
+        call fourn(zans, ndata, 2, -1) ! FFT backtransform to obtain stress change caused by past slip action
       endif
 
       do i=1, nmax
         do j=1, nmax
-          idata = i + (j-1)*ndata1
+          idata = i + (j-1)*ndata1 ! map (i,j) to 1D vector array again
 
-          if( k.ne.1 ) then
-            ans = facfft*dble(zans(idata)) 
-            dtau = tau0(i,j) + const*ans
-          else
-  	    dtau = tau0(i,j)
+          if( k.ne.1 ) then ! again for all time steps other than the first...
+            ans = facfft*dble(zans(idata)) ! get the result of the FFT backtransform by multiplying with a normalization factor.
+            dtau = tau0(i,j) + const*ans ! now obtain driving shear stress on cell at (i,j) at time step k by adding the elastic stress perturbation to the background stress
+          else ! remember: const = sqrt(3.0d0)/(4.0d0*pi)*mu is a factor to get the stress units right
+  	    dtau = tau0(i,j) ! in first time step, dtau is simply the background stress
           endif
-          dsigma = sigma(i,j)
+          dsigma = sigma(i,j) ! current shear strength at cell (i,j), to be compared with dtau
 
-	  if( iter.ne.0.and.k.le.kmin ) then
-	    if( vel(i,j,k).ne.0. ) then
-	      iv(i,j) = 1
+	  if( iter.ne.0.and.k.le.kmin ) then ! special case exception for non-zero iterations
+	    if( vel(i,j,k).ne.0. ) then ! if velo at (i,j,k) is not 0...
+	      iv(i,j) = 1 ! assign the cell as "slipping"
 	    else
-	      iv(i,j) = 0
-	      if( dtau.gt.dsigma ) iv(i,j) = 2
+	      iv(i,j) = 0 ! else, assign it as "locked", except if dtau (driving stress) exceeds dsigma (shear strength)
+	      if( dtau.gt.dsigma ) iv(i,j) = 2 ! in that case: mark as failed/nucleated
 	    endif
 	  else
-            if( iv(i,j).eq.0 ) then
-              vel(i,j,k) = 0.0d0
-              if( dtau.gt.dsigma ) iv(i,j) = 2
+            if( iv(i,j).eq.0 ) then ! this is the main velocity update, core of the code! if cell is assigned as locked...
+              vel(i,j,k) = 0.0d0 ! ... set its slip velo to 0.
+              if( dtau.gt.dsigma ) iv(i,j) = 2 ! but if driving stress exceeds strength, set it as failing
             else
-              iv(i,j) = 1
-	      if( (const*p000 + a(i,j)*dt).ge.0. ) then
-	        vel(i,j,k) = (tr(i,j) - dtau)/(const*p000)
+              iv(i,j) = 1 ! if cell is assigned as slipping...
+	      if( (const*p000 + a(i,j)*dt).ge.0. ) then ! ... and this criterion holds (ask Hideo. Cell reached residual strength?),
+	        vel(i,j,k) = (tr(i,j) - dtau)/(const*p000) ! assign slip velocity according to velo = (residual stress - driving stress)/unit factor (?)
 	      else
-                vel(i,j,k)  = (dsigma - dtau)/(const*p000 + a(i,j)*dt)
+                vel(i,j,k)  = (dsigma - dtau)/(const*p000 + a(i,j)*dt) ! if the criterion does not hold, assign velo according to slightly altered law
                 if((w(i,j)+vel(i,j,k)*dt).gt.dc(i,j)) then
                   vel(i,j,k) = ( tr(i,j) - dtau)/(const*p000)
                 endif
 	      endif
-              if(vel(i,j,k).lt.0.) then
+              if(vel(i,j,k).lt.0.) then ! if slip velo becomes negative, set it to 0 and assign the cell as locked
                 vel(i,j,k)  = 0.0d0
                 iv(i, j) = 0
-                if( dtau.gt.dsigma ) iv(i,j) = 2
+                if( dtau.gt.dsigma ) iv(i,j) = 2 ! ..., but if dtau > dsigma reassign it as failing
               endif
             endif
 	  endif
-
-          stress(i,j) = dtau + const*p000*vel(i,j,k)
-          tau(i,j) = dtau
-          w(i,j) = w(i,j) + vel(i,j,k)*dt
-	  if( iter.ne.npower ) vel2(i,j,k) = vel(i,j,k)
-          if( w(i,j).gt.dc(i,j) ) then
-            sigma(i,j) = tr(i,j)
+          ! now, update stress, slip, etc
+          stress(i,j) = dtau + const*p000*vel(i,j,k) ! instantaneous stress? Ask Hideo
+          tau(i,j) = dtau ! store driving stress for later use
+          w(i,j) = w(i,j) + vel(i,j,k)*dt ! Euler time integration of slip to obtain w at cell
+	  if( iter.ne.npower ) vel2(i,j,k) = vel(i,j,k) ! if the final scale stage has not been reached, store velocity field in vel2
+          if( w(i,j).gt.dc(i,j) ) then ! if accumulated slip exceeds fracture energy...
+            sigma(i,j) = tr(i,j) ! ..., sigma becomes residual stress
           else
-            sigma(i,j) = tp(i,j) - a(i,j)*w(i,j)
+            sigma(i,j) = tp(i,j) - a(i,j)*w(i,j) ! if not, it is updated according to the linear slip weakening with slide from tp to tr with slope a.
           endif
-	  if( irup(i,j).lt.0.and.vel(i,j,k).ne.0.) irup(i,j) = k
+	  if( irup(i,j).lt.0.and.vel(i,j,k).ne.0.) irup(i,j) = k ! track which cells have been reached by rupture and assign rupture time(index)
 
-          if((i.eq.1.or.i.eq.nmax).and.vel(i,j,k).ne.0.) icheck = 1
+          if((i.eq.1.or.i.eq.nmax).and.vel(i,j,k).ne.0.) icheck = 1 ! if cell at edge of scale stage is reached by rupture, set icheck to 1
           if((j.eq.1.or.j.eq.nmax).and.vel(i,j,k).ne.0.) icheck = 1
-	  if( vel(i,j,k).ne.0.) icheck2 = 1
+	  if( vel(i,j,k).ne.0.) icheck2 = 1 ! if there is a rupture at all, set icheck2 to 1 (if icheck2 = 0, rupture has died out)
 
-	  smrate(k) = smrate(k) + vel(i,j,k)*alpha
-          smoment(k) = smoment(k) + w(i,j)*ns
+	  smrate(k) = smrate(k) + vel(i,j,k)*alpha ! update moment release rate by summing up slip velos from all cells, scaled by alpha (ask Hideo)
+          smoment(k) = smoment(k) + w(i,j)*ns ! update total released moment with time integrated slip, scaled by ns
         enddo
       enddo
 
-      if( iter.le.npower ) then
-	write(num, '(i5.5)') ihypo
-        write(num2,'(i4.4)') iter*1000 + k
-        name3 = dir(1:ndir)//'/'//num(1:5)//'_step'//num2(1:4)//'.dat'
-        open(13, file=name3)
+!      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
+!	write(num, '(i5.5)') ihypo
+!        write(num2,'(i4.4)') iter*1000 + k
+!        name3 = dir(1:ndir)//'/'//num(1:5)//'_step'//num2(1:4)//'.dat'
+!        open(13, file=name3)
 	   
-        do i = 1, nmax
-          do j = 1, nmax
-            write(13, '(f7.1, 1x, f7.1, 1x, 3f13.8)') &
-     		real(i), real(j), vel(i,j,k)*alpha, w(i,j)*ns, stress(i,j)
-          enddo
-        enddo
-        close(13)
-      endif
+!        do i = 1, nmax
+!          do j = 1, nmax
+!            write(13, '(f7.1, 1x, f7.1, 1x, 3f13.8)') &
+!     		real(i), real(j), vel(i,j,k)*alpha, w(i,j)*ns, stress(i,j)
+!          enddo
+!        enddo
+!        close(13)
+!      endif
 
-      if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then
-        write(num,'(i5.5)') ihypo
+      if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of largest scale, or rupture has died out...
+        write(num,'(i5.5)') ihypo ! write final results to output files
         write(num2,'(i1.1)') iter
         name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
         open(13, file=name3)
@@ -417,7 +417,7 @@ do isim = isim0, isim0
 	dtreal = dsreal/(2.*alpha*1000.)
 
 	smo = 4.*(smo/1000.)*dsreal**2*mu*10.0**9
-	mw = (log10(smo)-9.1)/1.5
+	mw = (log10(smo)-9.1)/1.5 ! calculate the magnitude of the event
         name4 = dir(1:ndir)//'/output'//num(1:5)//'f.dat'
         open(14, file=name4)
 	write(14, '(3i5)') ihypo, iter, k
