@@ -20,7 +20,7 @@ REAL(8) :: pi, mu, const, facbiem, facfft, &
 		p000, ker31s, dtau, dsigma, alpha, &
 		ds, dt, rad, r0, rini, xhypo, yhypo, &
 		xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
-		t, piece1, ans
+		t, piece1, piece1_offset, ans, offset
 REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
 REAL :: ran1
 INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
@@ -29,12 +29,12 @@ INTEGER :: i, j, k, l, m, n, ndir, idata, ix, iy, &
 		ndense, nasp, idum, iscale, ihypo, isim, isim0, nhypo, &
 		nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2
 INTEGER :: ndata(2)
-DOUBLE COMPLEX zdata(ndata1*ndata2), zresp(ndata1*ndata2)
+DOUBLE COMPLEX zdata(ndata1*ndata2), zresp(ndata1*ndata2), zresp_offset(ndata1*ndata2)
 DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
-DOUBLE COMPLEX zker(ndata1*ndata2, itmx)
+DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zans(ndata1*ndata2)
 EXTERNAL ker31s, ran1
-CHARACTER*40 name2, name3, name4, name5, name6, name7, dir, param_file
+CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, dir, param_file
 CHARACTER*5  num, num2
 
 ! PARAMETER FILE
@@ -169,6 +169,49 @@ do k = 1, itmx ! loop over each time step
     zker(idata, k) = zresp(idata) ! store fourier transformed Green's function for all time steps!
   enddo
 enddo
+
+!
+! RESPONSE FUNCTION (for of-plane shear stress calculation)
+!
+offset = 10.d0 ! z-coordinate of off-plane measurement plane
+do k = 1, itmx
+  do idata=1, ndata1*ndata2
+    zresp_offset(idata) = cmplx(0.0d0, 0.0d0)
+  enddo
+  do i = 1-nmax, nmax-1
+    ix = i + 1
+    if(i.lt.0) ix = ix + ndata1
+    do j = 1-nmax, nmax-1
+      piece1_offset = ker31s(dble(i), dble(j), offset, dble(k), facbiem)
+      iy = j + 1
+      if(j.lt.0) iy = iy + ndata2
+      idata = ix + (iy-1)*ndata1
+      zresp_offset(idata) = cmplx(piece1_offset, 0.0d0)
+    enddo
+  enddo
+  call fourn(zresp, ndata, 2, 1)
+  do idata=1, ndata1*ndata2
+    zker_offset(idata, k) = zresp_offset(idata)
+  enddo
+enddo
+
+
+
+name8 = dir(1:ndir)//'/kernel.dat'
+
+open(18, file=name8)
+do idata = 1, ndata1*ndata2
+  write(18, '(100g15.5)') zker(idata,:)
+enddo
+close(18)
+
+name9 = dir(1:ndir)//'/kernel_offset.dat'
+
+open(19, file=name9)
+do idata = 1, ndata1*ndata2
+  write(19, '(100g15.5)') zker_offset(idata,:)
+enddo
+close(19)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 
