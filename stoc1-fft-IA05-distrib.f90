@@ -146,7 +146,7 @@ ALLOCATE( x0(nhypo), y0(nhypo) )
         close(71)
 
 !
-! RESPONSE FUNCTION
+! RESPONSE FUNCTION (for in-plane shear stress calculation)
 !
 p000 = ker31s(0.0d0, 0.0d0, 0.0d0, 0.0d0, facbiem) ! get reference value of the Kernel at the origin
 do k = 1, itmx ! loop over each time step
@@ -243,7 +243,7 @@ do isim = isim0, isim0
     do i = 1, nmax ! loop over all x-positions
       do j = 1, nmax ! loop over all y-positions
         w(i,j) = 0.0d0 ! time integrated slip, set to 0
-        tau0(i,j) = t0 ! unclear
+        tau0(i,j) = t0 ! background stress<ftau0
         tp(i,j) = tp0 ! peak strength parameter for cell, set to uniform tp0
         tr(i,j) = tr0 ! residual strength after failure, uniform tr0
         dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
