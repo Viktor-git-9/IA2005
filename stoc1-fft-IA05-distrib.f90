@@ -13,14 +13,14 @@ PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
 REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2
 REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
-	stress, sigma, w, a, tau, dc
+	stress, sigma, w, a, tau, dc, dtau_offset
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
 REAL(8) :: pi, mu, const, facbiem, facfft, &
 		tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
 		p000, ker31s, dtau, dsigma, alpha, &
 		ds, dt, rad, r0, rini, xhypo, yhypo, &
 		xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
-		t, piece1, piece1_offset, ans, offset
+		t, piece1, piece1_offset, ans, offset, ans_offset
 REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
 REAL :: ran1
 INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
@@ -32,11 +32,14 @@ INTEGER :: ndata(2)
 DOUBLE COMPLEX zdata(ndata1*ndata2), zresp(ndata1*ndata2), zresp_offset(ndata1*ndata2)
 DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
-DOUBLE COMPLEX zans(ndata1*ndata2)
+DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
 EXTERNAL ker31s, ran1
 CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, dir, param_file
 CHARACTER*5  num, num2
+CHARACTER(10) :: currentTime
 
+call date_and_time(TIME=currentTime)
+print '(a)', currentTime
 ! PARAMETER FILE
         param_file = "IA05.prm"
         open(11, file=param_file, status="old", err=99)
@@ -87,7 +90,7 @@ ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx) )
 ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
        stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
      	sigma(nmax, nmax),      w(nmax, nmax), &
-     	   iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax) )
+     	   iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax) )
 ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
 ALLOCATE( dcorg(ixmax, ixmax) )
 
@@ -173,7 +176,7 @@ enddo
 !
 ! RESPONSE FUNCTION (for of-plane shear stress calculation)
 !
-offset = 10.d0 ! z-coordinate of off-plane measurement plane
+offset = 1000.d0 ! z-coordinate of off-plane measurement plane
 do k = 1, itmx
   do idata=1, ndata1*ndata2
     zresp_offset(idata) = cmplx(0.0d0, 0.0d0)
@@ -197,21 +200,21 @@ enddo
 
 
 
-name8 = dir(1:ndir)//'/kernel.dat'
+!name8 = dir(1:ndir)//'/kernel.dat'
+!
+!open(18, file=name8)
+!do idata = 1, ndata1*ndata2
+!  write(18, '(100g15.5)') zker(idata,:)
+!enddo
+!close(18)
 
-open(18, file=name8)
-do idata = 1, ndata1*ndata2
-  write(18, '(100g15.5)') zker(idata,:)
-enddo
-close(18)
-
-name9 = dir(1:ndir)//'/kernel_offset.dat'
-
-open(19, file=name9)
-do idata = 1, ndata1*ndata2
-  write(19, '(100g15.5)') zker_offset(idata,:)
-enddo
-close(19)
+!name9 = dir(1:ndir)//'/kernel_offset.dat'
+!
+!open(19, file=name9)
+!do idata = 1, ndata1*ndata2
+!  write(19, '(100g15.5)') zker_offset(idata,:)
+!enddo
+!close(19)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 
@@ -357,10 +360,14 @@ do isim = isim0, isim0
           zans(idata) = (0.0d0, 0.0d0) ! set zans to 0 
           do n=1, k-1 ! this is the actual convolution, carried out over all previous time steps -> over the full slip velo history
             zans(idata) = zans(idata) +  &
-		zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
+		        zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
+
+            zans_offset(idata) = zans(idata) + &
+            zker_offset(idata, k-n)*zvel(idata, n) ! do the same for offplane kernel
           enddo
         enddo
         call fourn(zans, ndata, 2, -1) ! FFT backtransform to obtain stress change caused by past slip action
+        call fourn(zans_offset, ndata, 2, -1) ! same thing for offplane stress
       endif
 
       do i=1, nmax
@@ -369,9 +376,12 @@ do isim = isim0, isim0
 
           if( k.ne.1 ) then ! again for all time steps other than the first...
             ans = facfft*dble(zans(idata)) ! get the result of the FFT backtransform by multiplying with a normalization factor.
+            ans_offset = facfft*dble(zans_offset(idata)) ! and the same for offplane stress
             dtau = tau0(i,j) + const*ans ! now obtain driving shear stress on cell at (i,j) at time step k by adding the elastic stress perturbation to the background stress
+            dtau_offset(i,j) = tau0(i,j) + const*ans_offset
           else ! remember: const = sqrt(3.0d0)/(4.0d0*pi)*mu is a factor to get the stress units right
   	    dtau = tau0(i,j) ! in first time step, dtau is simply the background stress
+        dtau_offset = tau0(i,j)
           endif
           dsigma = sigma(i,j) ! current shear strength at cell (i,j), to be compared with dtau
 
@@ -404,7 +414,7 @@ do isim = isim0, isim0
             endif
 	  endif
           ! now, update stress, slip, etc
-          stress(i,j) = dtau + const*p000*vel(i,j,k) ! instantaneous stress? Ask Hideo
+          stress(i,j) = dtau + const*p000*vel(i,j,k) ! instantaneous stress? Ask Hideo. This line puzzles me; why multiply again with scaled velo?
           tau(i,j) = dtau ! store driving stress for later use
           w(i,j) = w(i,j) + vel(i,j,k)*dt ! Euler time integration of slip to obtain w at cell
 	  if( iter.ne.npower ) vel2(i,j,k) = vel(i,j,k) ! if the final scale stage has not been reached, store velocity field in vel2
@@ -448,9 +458,9 @@ do isim = isim0, isim0
 	smo = 0.0d0
         do i = 1, nmax
           do j = 1, nmax
-            write(13, 105) i, j, dc(i,j)*ns, irup(i,j), w(i,j)*ns
+            write(13, 105) i, j, dc(i,j)*ns, irup(i,j), w(i,j)*ns, dtau_offset(i,j)
 	    if(w(i,j).ne.0.) smo = smo + w(i,j)*ns
- 105	  format(2i5, 1x, f9.3, i10, 1x, f9.3)
+ 105	  format(2i5, 1x, f9.3, i10, 1x, f9.3, 1x, f9.3)
           enddo
         enddo
         close(13)
