@@ -218,8 +218,13 @@ name9 = dir(1:ndir)//'/kernel1line_offset_1000.dat'
 !close(19)
 
 open(19, file=name9)
-write(19, '(100g15.5)') kernel_testline
+do i = 1, nmax
+  do j = 1, nmax
+    write(19, 100) i, j, kernel_testline(i,j)
+  enddo
+enddo
 close(19)
+100 format(i5, 1x, i5, 1x, f15.6)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 
