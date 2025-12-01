@@ -11,16 +11,16 @@ INTEGER npower, nscale, ixmax, itmx
 PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
-REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2
+REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, piece1_offset
 REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
-	stress, sigma, w, a, tau, dc, dtau_offset
+	stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
 REAL(8) :: pi, mu, const, facbiem, facfft, &
 		tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
 		p000, ker31s, dtau, dsigma, alpha, &
 		ds, dt, rad, r0, rini, xhypo, yhypo, &
 		xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
-		t, piece1, piece1_offset, ans, offset, ans_offset
+		t, piece1, ans, offset, ans_offset
 REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
 REAL :: ran1
 INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
@@ -86,11 +86,11 @@ print '(a)', currentTime
 	xhypo = (1+nmax)/2.
 	yhypo = (1+nmax)/2.
 
-ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx) )
+ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), piece1_offset(nmax, nmax, 0:itmx) )
 ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
        stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
      	sigma(nmax, nmax),      w(nmax, nmax), &
-     	   iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax) )
+     	   iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
 ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
 ALLOCATE( dcorg(ixmax, ixmax) )
 
@@ -185,17 +185,18 @@ do k = 1, itmx
     ix = i + 1
     if(i.lt.0) ix = ix + ndata1
     do j = 1-nmax, nmax-1
-      piece1_offset = ker31s(dble(i), dble(j), offset, dble(k), facbiem)
+      piece1_offset(i,j,k) = ker31s(dble(i), dble(j), dble(offset), dble(k), facbiem)
       iy = j + 1
       if(j.lt.0) iy = iy + ndata2
       idata = ix + (iy-1)*ndata1
-      zresp_offset(idata) = cmplx(piece1_offset, 0.0d0)
+      zresp_offset(idata) = cmplx(piece1_offset(i,j,k), 0.0d0)
     enddo
   enddo
   call fourn(zresp, ndata, 2, 1)
   do idata=1, ndata1*ndata2
     zker_offset(idata, k) = zresp_offset(idata)
   enddo
+  if(k.eq.250) kernel_testline = piece1_offset(:,:,k)
 enddo
 
 
@@ -208,13 +209,17 @@ enddo
 !enddo
 !close(18)
 
-!name9 = dir(1:ndir)//'/kernel_offset.dat'
-!
+name9 = dir(1:ndir)//'/kernel1line_offset_1000.dat'
+
 !open(19, file=name9)
 !do idata = 1, ndata1*ndata2
 !  write(19, '(100g15.5)') zker_offset(idata,:)
 !enddo
 !close(19)
+
+open(19, file=name9)
+write(19, '(100g15.5)') kernel_testline
+close(19)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 
