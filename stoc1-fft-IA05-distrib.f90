@@ -11,16 +11,16 @@ INTEGER npower, nscale, ixmax, itmx
 PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
-REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, piece1_offset
+REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2
 REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
 	stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
 REAL(8) :: pi, mu, const, facbiem, facfft, &
 		tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
-		p000, ker31s, dtau, dsigma, alpha, &
+		p000, p000_offset, ker31s, dtau, dsigma, alpha, &
 		ds, dt, rad, r0, rini, xhypo, yhypo, &
 		xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
-		t, piece1, ans, offset, ans_offset
+		t, piece1, piece1_offset, ans, offset, ans_offset
 REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
 REAL :: ran1
 INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
@@ -86,7 +86,7 @@ print '(a)', currentTime
 	xhypo = (1+nmax)/2.
 	yhypo = (1+nmax)/2.
 
-ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), piece1_offset(nmax, nmax, 0:itmx) )
+ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx))
 ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
        stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
      	sigma(nmax, nmax),      w(nmax, nmax), &
@@ -148,69 +148,20 @@ ALLOCATE( x0(nhypo), y0(nhypo) )
         enddo
         close(71)
 
-!
-! RESPONSE FUNCTION (for in-plane shear stress calculation)
-!
-p000 = ker31s(0.0d0, 0.0d0, 0.0d0, 0.0d0, facbiem) ! get reference value of the Kernel at the origin
-do k = 1, itmx ! loop over each time step
-  do idata=1, ndata1*ndata2 ! set complex response array zresp (1D array storing all 2D grid points)
-    zresp(idata) = cmplx(0.0d0, 0.0d0) ! reset to 0 for each time step
-  enddo
-  do i = 1-nmax, nmax-1 ! loop over first spatial dimension
-    ix = i + 1 ! periodic index creation (ask Hideo!)
-    if(i.lt.0)  ix = ix + ndata1 ! for negative values of i, shift into positive index values
-    do j = 1-nmax, nmax-1 ! inner loop over second spatial dimension
-      piece1 = ker31s(dble(i), dble(j), 0.d0, dble(k), facbiem) ! evaluate kernel at location (i, j, 0), time step k
-      iy = j + 1
-      if(j.lt.0) iy = iy + ndata2 ! periodic indexing for j (index in y-direction)
-      idata = ix + (iy-1)*ndata1 ! map 2D index (ix, iy) to 1D vector (to fill zresp)
-      zresp(idata) = cmplx(piece1, 0.0d0) ! fill zresp with complex numbers with imaginary part 0 -> builds spatial kernel at time step k
-    enddo
-  enddo
-  call fourn(zresp, ndata, 2, 1) ! call 2D fourier transform routine for zresp
-  do idata=1, ndata1*ndata2
-    zker(idata, k) = zresp(idata) ! store fourier transformed Green's function for all time steps!
-  enddo
-enddo
+offset = 20.d0 ! z-coordinate of off-plane measurement plane
+call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
+call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
 
-!
-! RESPONSE FUNCTION (for of-plane shear stress calculation)
-!
-offset = 100.d0 ! z-coordinate of off-plane measurement plane
-do k = 1, itmx
-  do idata=1, ndata1*ndata2
-    zresp_offset(idata) = cmplx(0.0d0, 0.0d0)
-  enddo
-  do i = 1-nmax, nmax-1
-    ix = i + 1
-    if(i.lt.0) ix = ix + ndata1
-    do j = 1-nmax, nmax-1
-      piece1_offset(i,j,k) = ker31s(dble(i), dble(j), dble(offset), dble(k), facbiem)
-      iy = j + 1
-      if(j.lt.0) iy = iy + ndata2
-      idata = ix + (iy-1)*ndata1
-      zresp_offset(idata) = cmplx(piece1_offset(i,j,k), 0.0d0)
-    enddo
-  enddo
-  call fourn(zresp, ndata, 2, 1)
-  do idata=1, ndata1*ndata2
-    zker_offset(idata, k) = zresp_offset(idata)
-  enddo
-  if(k.eq.250) kernel_testline = piece1_offset(:,:,k)
-enddo
-write(*,*) maxval(abs(zker_offset))
+!name8 = dir(1:ndir)//'/zker_loop_1.dat'
 
-
-!name8 = dir(1:ndir)//'/kernel.dat'
-!
 !open(18, file=name8)
 !do idata = 1, ndata1*ndata2
 !  write(18, '(100g15.5)') zker(idata,:)
 !enddo
 !close(18)
 
-!name9 = dir(1:ndir)//'/zker_offset_100.dat'
-
+!name9 = dir(1:ndir)//'/zker_offset_loop_1.dat'
+!
 !open(19, file=name9)
 !do idata = 1, ndata1*ndata2
 !  write(19, '(100g15.5)') zker_offset(idata,:)
