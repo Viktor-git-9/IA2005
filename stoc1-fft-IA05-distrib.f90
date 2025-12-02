@@ -176,7 +176,7 @@ enddo
 !
 ! RESPONSE FUNCTION (for of-plane shear stress calculation)
 !
-offset = 1000.d0 ! z-coordinate of off-plane measurement plane
+offset = 100.d0 ! z-coordinate of off-plane measurement plane
 do k = 1, itmx
   do idata=1, ndata1*ndata2
     zresp_offset(idata) = cmplx(0.0d0, 0.0d0)
@@ -198,7 +198,7 @@ do k = 1, itmx
   enddo
   if(k.eq.250) kernel_testline = piece1_offset(:,:,k)
 enddo
-
+write(*,*) maxval(abs(zker_offset))
 
 
 !name8 = dir(1:ndir)//'/kernel.dat'
@@ -209,7 +209,7 @@ enddo
 !enddo
 !close(18)
 
-name9 = dir(1:ndir)//'/kernel1line_offset_1000.dat'
+!name9 = dir(1:ndir)//'/zker_offset_100.dat'
 
 !open(19, file=name9)
 !do idata = 1, ndata1*ndata2
@@ -217,14 +217,23 @@ name9 = dir(1:ndir)//'/kernel1line_offset_1000.dat'
 !enddo
 !close(19)
 
-open(19, file=name9)
-do i = 1, nmax
-  do j = 1, nmax
-    write(19, 100) i, j, kernel_testline(i,j)
-  enddo
-enddo
-close(19)
-100 format(i5, 1x, i5, 1x, f15.6)
+!open(19, file=name9)
+!do idata = 1, ndata1*ndata2
+!  do k = 1, itmx
+!    write(19, 100) idata, k, real(zker_offset(idata,k)), aimag(zker_offset(idata,k))
+!  enddo
+!enddo
+!close(19)
+!100 format(i5, 1x, i5, 1x, g15.6, 1x, g15.6)
+
+!open(19, file=name9)
+!do i = 1, nmax
+!  do j = 1, nmax
+!    write(19, 100) i, j, kernel_testline(i,j)
+!  enddo
+!enddo
+!close(19)
+!100 format(i5, 1x, i5, 1x, f15.6)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 
@@ -367,12 +376,13 @@ do isim = isim0, isim0
         enddo
 
         do idata=1, ndata1*ndata2
-          zans(idata) = (0.0d0, 0.0d0) ! set zans to 0 
+          zans(idata) = (0.0d0, 0.0d0) ! set zans to 0
+          zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offet
           do n=1, k-1 ! this is the actual convolution, carried out over all previous time steps -> over the full slip velo history
             zans(idata) = zans(idata) +  &
 		        zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
 
-            zans_offset(idata) = zans(idata) + &
+            zans_offset(idata) = zans_offset(idata) + &
             zker_offset(idata, k-n)*zvel(idata, n) ! do the same for offplane kernel
           enddo
         enddo
@@ -443,6 +453,8 @@ do isim = isim0, isim0
           smoment(k) = smoment(k) + w(i,j)*ns ! update total released moment with time integrated slip, scaled by ns
         enddo
       enddo
+
+      !write(*,*) maxval(abs(dtau_offset))
 
 !      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
 !	write(num, '(i5.5)') ihypo
