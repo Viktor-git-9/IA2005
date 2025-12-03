@@ -4,8 +4,10 @@
 ! Inputs:
 ! Outputs: 
 ! Author: Viktor Essbach (v.essbach@ens.psl.fr), 12/25
-
-        SUBROUTINE get_resp(p000, zker, itmx, ndata1, ndata2, nmax, offset, facbiem, stressType)
+Module getResponse
+IMPLICIT NONE
+CONTAINS
+    SUBROUTINE get_resp(p000, zker, itmx, ndata1, ndata2, nmax, offset, facbiem, stressType)
         IMPLICIT NONE
         INTEGER :: k, idata, i, j, ix, iy, itmx, ndata1, ndata2, nmax, stressType
         INTEGER :: ndata(2)
@@ -74,5 +76,6 @@
             end select
             return
 
-            END
+    END SUBROUTINE
+END MODULE getResponse
                 
