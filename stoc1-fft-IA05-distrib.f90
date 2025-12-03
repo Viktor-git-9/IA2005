@@ -4,8 +4,11 @@
 ! Refer Ide and Aochi (JGR, 2005). doi:1O.1029/2004JB003591.
 ! See README file or related file.
 ! >ifort stoc1-fft-IA05-distrib.f90 ran1.f fourn-d.f kernel31s_05Avril.f (verified on Unix and Windows)
+PROGRAM main
+use getResponse
+use writeArrays
 IMPLICIT NONE
-! 
+!
 INTEGER nmax, ndata1, ndata2
 INTEGER npower, nscale, ixmax, itmx
 PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
@@ -137,57 +140,18 @@ ALLOCATE( x0(nhypo), y0(nhypo) )
 
           enddo
         enddo
-	name7 = dir(1:ndir)//'/hetero.org'
+
 	ns = ixmax/256
 	if(ns.lt.1) ns = 1
-	open(71, file=name7)
-        do i=1, ixmax, ns
-          do j=1, ixmax, ns
-            write(71,'(2i7, f10.3)') i, j, dcorg(i,j)
-          enddo
-        enddo
-        close(71)
+
+name7 = dir(1:ndir)//'/hetero.org'
+call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
 offset = 20.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
 
-!name8 = dir(1:ndir)//'/zker_loop_1.dat'
-
-!open(18, file=name8)
-!do idata = 1, ndata1*ndata2
-!  write(18, '(100g15.5)') zker(idata,:)
-!enddo
-!close(18)
-
-!name9 = dir(1:ndir)//'/zker_offset_loop_1.dat'
-!
-!open(19, file=name9)
-!do idata = 1, ndata1*ndata2
-!  write(19, '(100g15.5)') zker_offset(idata,:)
-!enddo
-!close(19)
-
-!open(19, file=name9)
-!do idata = 1, ndata1*ndata2
-!  do k = 1, itmx
-!    write(19, 100) idata, k, real(zker_offset(idata,k)), aimag(zker_offset(idata,k))
-!  enddo
-!enddo
-!close(19)
-!100 format(i5, 1x, i5, 1x, g15.6, 1x, g15.6)
-
-!open(19, file=name9)
-!do i = 1, nmax
-!  do j = 1, nmax
-!    write(19, 100) i, j, kernel_testline(i,j)
-!  enddo
-!enddo
-!close(19)
-!100 format(i5, 1x, i5, 1x, f15.6)
-
 name2 = dir(1:ndir)//'/hoge2.dat'
-
 open(12, file=name2)
 write(12, '(5i10)') nmax, nscale, npower, ixmax, itmx
 write(12, '(5f10.3)') mu, alpha, tp0, tr0, t0
