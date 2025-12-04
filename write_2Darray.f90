@@ -1,10 +1,3 @@
-! Subroutine write_2Darray_real.f90
-! Write the indices and elements of a real double precision 2D array to a .dat file.
-! Careful, this is slow for large arrays. Use for debugging.
-! Inputs: data (2D array of real double precision numbers), filename (character string to designate file)
-! Outputs: writes data to file
-! Author: Viktor Essbach (v.essbach@ens.psl.fr), 12/25
-
 Module writeArrays
 IMPLICIT NONE
 CONTAINS

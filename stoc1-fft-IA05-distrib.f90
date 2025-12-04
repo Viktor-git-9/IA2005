@@ -7,6 +7,7 @@
 PROGRAM main
 use getResponse
 use writeArrays
+use makeDCmap
 IMPLICIT NONE
 !
 INTEGER nmax, ndata1, ndata2
@@ -101,45 +102,49 @@ ALLOCATE( dcorg(ixmax, ixmax) )
 ! CREATING DC
 ! The following section creates the fractal asperity map.
 ! to be fixed (-411) for obtaining the same result as case1-1
-        idum = -411
-        dcmax = dc0*nscale**(npower + 1)
-	dcorg = real(dcmax)
+!        idum = -411
+!        dcmax = dc0*nscale**(npower + 1)
+!	dcorg = real(dcmax)
+!
+!        nscale2 = nscale/2
+!        npower2 = npower*2
+!	nhypo = ndense*(nscale2*nscale2)**npower2
+!ALLOCATE( x0(nhypo), y0(nhypo) )
+!
+!        do iscale = 0,  npower2
+!          nasp = ndense*(nscale2*nscale2)**(npower2 - iscale)
+!          r0dum = r0*nscale2**iscale
+!          dcdum = dc0*nscale2**iscale
+!          do ihypo = 1, nasp
+!            xo = ran1(idum)*ixmax
+!            yo = ran1(idum)*ixmax
+!            if(iscale.eq.0 ) then
+!                x0(ihypo) = xo
+!                y0(ihypo) = yo
+!            endif
+!
+!            do i = int(xo - r0dum)-1, int(xo + r0dum)+1
+!              i1 = i
+!              if(i1.lt.1) i1 = ixmax + i
+!              if(i1.gt.ixmax) i1 =  i - ixmax
+!              do j = int(yo - r0dum)-1, int(yo + r0dum)+1
+!                j1 = j
+!                if(j1.lt.1) j1 = ixmax + j
+!                if(j1.gt.ixmax) j1 =  j - ixmax
+!
+!                rad = sqrt((i-xo)**2 + (j-yo)**2)
+!                if( rad.le.r0dum ) then
+!                  if( dcorg(i1,j1).gt.dcdum ) dcorg(i1,j1) = real(dcdum)
+!                endif
+!	      enddo
+!	    enddo
+!
+!          enddo
+!        enddo
 
-        nscale2 = nscale/2
-        npower2 = npower*2
-	nhypo = ndense*(nscale2*nscale2)**npower2
+! Creating Dc again with new subroutine
 ALLOCATE( x0(nhypo), y0(nhypo) )
-
-        do iscale = 0,  npower2
-          nasp = ndense*(nscale2*nscale2)**(npower2 - iscale)
-          r0dum = r0*nscale2**iscale
-          dcdum = dc0*nscale2**iscale
-          do ihypo = 1, nasp
-            xo = ran1(idum)*ixmax
-            yo = ran1(idum)*ixmax
-            if(iscale.eq.0 ) then
-                x0(ihypo) = xo
-                y0(ihypo) = yo
-            endif
-
-            do i = int(xo - r0dum)-1, int(xo + r0dum)+1
-              i1 = i
-              if(i1.lt.1) i1 = ixmax + i
-              if(i1.gt.ixmax) i1 =  i - ixmax
-              do j = int(yo - r0dum)-1, int(yo + r0dum)+1
-                j1 = j
-                if(j1.lt.1) j1 = ixmax + j
-                if(j1.gt.ixmax) j1 =  j - ixmax
-
-                rad = sqrt((i-xo)**2 + (j-yo)**2)
-                if( rad.le.r0dum ) then
-                  if( dcorg(i1,j1).gt.dcdum ) dcorg(i1,j1) = real(dcdum)
-                endif
-	      enddo
-	    enddo
-
-          enddo
-        enddo
+call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
 	ns = ixmax/256
 	if(ns.lt.1) ns = 1
@@ -147,7 +152,7 @@ ALLOCATE( x0(nhypo), y0(nhypo) )
 name7 = dir(1:ndir)//'/hetero.org'
 call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
-offset = 20.d0 ! z-coordinate of off-plane measurement plane
+offset = 5.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
 
