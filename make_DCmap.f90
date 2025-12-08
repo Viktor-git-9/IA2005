@@ -3,28 +3,30 @@ IMPLICIT NONE
 Contains
 
 SUBROUTINE make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
-    ! Description goes here
-    IMPLICIT NONE
-    INTEGER :: nscale, npower, idum, iscale, ihypo, i, j, i1, j1, &
-    nhypo, ndense, nscale2, npower2, nasp, ixmax
-    REAL :: dcorg(:,:)
-    REAL(8) :: x0(:), y0(:)
-    REAL(8) :: dcmax, dc0, r0, r0dum, dcdum, xo, yo, rad
+  ! Description goes here
+  IMPLICIT NONE
+  INTEGER :: nscale, npower, idum, iscale, ihypo, i, j, i1, j1, &
+  nhypo, ndense, nscale2, npower2, nasp, ixmax
+  REAL, intent(inout) :: dcorg(:,:)
+  REAL(8), intent(out), allocatable :: x0(:), y0(:)
+  REAL(8) :: dcmax, dc0, r0, r0dum, dcdum, xo, yo, rad
 
-    interface
-      REAL FUNCTION ran1(idhypo)
-      INTEGER, intent(in) :: idhypo
-      END FUNCTION ran1
-    end interface
+  interface
+    REAL FUNCTION ran1(idhypo)
+    INTEGER, intent(in) :: idhypo
+    END FUNCTION ran1
+  end interface
 
 
-            idum = -411
-        dcmax = dc0*nscale**(npower + 1)
+  idum = -411
+  dcmax = dc0*nscale**(npower + 1)
 	dcorg = real(dcmax)
 
-        nscale2 = nscale/2
-        npower2 = npower*2
+  nscale2 = nscale/2
+  npower2 = npower*2
 	nhypo = ndense*(nscale2*nscale2)**npower2
+  write(*,*) "Creating fractal asperity map..."
+  ALLOCATE( x0(nhypo), y0(nhypo) )
 
         do iscale = 0,  npower2
           nasp = ndense*(nscale2*nscale2)**(npower2 - iscale)
@@ -56,6 +58,23 @@ SUBROUTINE make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0,
 
           enddo
         enddo
-      END SUBROUTINE
-    END MODULE makeDCmap
+write(*,*) "Fractal asperity map ready."
+END SUBROUTINE
+
+SUBROUTINE make_homogeneous_DCmap(dcorg, ixmax, dc0, dcmax, r_asperity)
+  IMPLICIT NONE
+  INTEGER :: i, j, ixmax, dc0, dcmax
+  REAL(8) :: dcmax, dc0, r_asperity, rad
+  REAL, intent(inout) :: dcorg(:,:)
+
+  dcorg = dc0
+  do i = 0, ixmax
+    do j = 0, ixmax
+      rad = 
+    enddo
+  enddo
+
+END SUBROUTINE
+
+END MODULE makeDCmap
 

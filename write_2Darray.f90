@@ -14,6 +14,7 @@ SUBROUTINE write_real_2DArray(data, filename)
     DOUBLE PRECISION, intent(in) :: data(:,:)
     CHARACTER(len=*), intent(in) :: filename
 
+    write(*,*) "Writing to file..."
     nRows = size(data,1)
     nCols = size(data,2)
     open(19, file=filename)
@@ -24,6 +25,7 @@ SUBROUTINE write_real_2DArray(data, filename)
     enddo
     close(19)
     100 format(i5, 1x, i5, 1x, f15.6)
+    write(*,*) "File written!"
 
 END SUBROUTINE
 
@@ -39,10 +41,9 @@ SUBROUTINE write_cmplx_2DArray(data, filename)
     DOUBLE COMPLEX, intent(in) :: data(:,:)
     CHARACTER(len=*), intent(in) :: filename
 
+    write(*,*) "Writing to file..."
     nRows = size(data,1)
     nCols = size(data,2)
-    write(*,*) "Made it here"
-    write(*,*) data(1,1)
     open(19, file=filename)
     do i = 1, nRows
         do j = 1, nCols
@@ -51,6 +52,7 @@ SUBROUTINE write_cmplx_2DArray(data, filename)
     enddo
     close(19)
     100 format(i5, 1x, i5, 1x, f15.6, 1x, f15.6)
+    write(*,*) "File written!"
 
 END SUBROUTINE
 
