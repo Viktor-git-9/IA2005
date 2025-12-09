@@ -24,7 +24,7 @@ REAL(8) :: pi, mu, const, facbiem, facfft, &
 		p000, p000_offset, ker31s, dtau, dsigma, alpha, &
 		ds, dt, rad, r0, rini, xhypo, yhypo, &
 		xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
-		t, piece1, piece1_offset, ans, offset, ans_offset
+		t, piece1, piece1_offset, ans, offset, ans_offset, r_asperity
 REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
 REAL :: ran1
 INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
@@ -41,8 +41,6 @@ EXTERNAL ker31s, ran1
 CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, dir, param_file
 CHARACTER*5  num, num2
 CHARACTER(10) :: currentTime
-
-write(*,*) ixmax
 
 call date_and_time(TIME=currentTime)
 print '(a)', currentTime
@@ -102,13 +100,14 @@ ALLOCATE( dcorg(ixmax, ixmax) )
 
 
 ! Creating asperity map with subroutine
-call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+!call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+
 
 ns = ixmax/256
 if(ns.lt.1) ns = 1
 
-name7 = dir(1:ndir)//'/hetero.org'
-call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
+!name7 = dir(1:ndir)//'/hetero.org'
+!call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
 offset = 10.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
@@ -140,6 +139,12 @@ do isim = isim0, isim0
   if(isim.eq.4) ihypo = 10426
   if(isim.eq.5) ihypo = 12746 
   if(isim.eq.6) ihypo = 13375
+
+  r_asperity = 100
+  call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
+
+  name7 = dir(1:ndir)//'/hetero.org'
+  call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
   write(num, '(i5.5)') ihypo 
   name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
