@@ -15,7 +15,7 @@ INTEGER npower, nscale, ixmax, itmx
 PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
-REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, allRuptureTimes ! I made some new book-keeping arrays, to be written and exported to python
+REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, allRuptureTimes, allSlips! I made some new book-keeping arrays, to be written and exported to python
 REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
 	stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
@@ -38,7 +38,8 @@ DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
 EXTERNAL ker31s, ran1
-CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, name99, dir, param_file
+CHARACTER*100 :: savePath1
+CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, name98, name99, dir, param_file
 CHARACTER*5  num, num2
 CHARACTER(10) :: currentTime
 
@@ -90,7 +91,7 @@ print '(a)', currentTime
 	xhypo = (1+nmax)/2.
 	yhypo = (1+nmax)/2.
 
-ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), allRuptureTimes(nmax, nmax, 0:itmx))
+ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), allRuptureTimes(nmax, nmax, 0:itmx), allSlips(nmax, nmax, 0:itmx))
 ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
        stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
      	sigma(nmax, nmax),      w(nmax, nmax), &
@@ -339,6 +340,7 @@ do isim = isim0, isim0
       enddo
 
       allRuptureTimes(:,:,k) = irup ! store rupture times in book keeping array
+      allSlips(:,:,k) = w
       !write(*,*) maxval(abs(dtau_offset))
 
 !      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
@@ -373,10 +375,11 @@ do isim = isim0, isim0
         close(13)
 
         !!! Writing new book-keeping files for python here !!!
+        savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/'
         name99 = 'ruptureTimes'//num2(1:1)//'.bin'
-        write(*,*) name99
-        write(*,*) maxval(allRuptureTimes)
-        call write_real_3DArray_bin(allRuptureTimes, name99)
+        name98 = 'slipHistories'//num2(1:1)//'.bin'
+        call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
+        call write_real_3DArray_bin(allSlips, savePath1//name98)
 
         coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
 	dsreal = 4.d0*ns*ds
