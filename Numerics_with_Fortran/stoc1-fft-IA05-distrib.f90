@@ -15,7 +15,7 @@ INTEGER npower, nscale, ixmax, itmx
 PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
-REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2
+REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, allRuptureTimes ! I made some new book-keeping arrays, to be written and exported to python
 REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
 	stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
@@ -38,7 +38,7 @@ DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
 EXTERNAL ker31s, ran1
-CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, dir, param_file
+CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, name99, dir, param_file
 CHARACTER*5  num, num2
 CHARACTER(10) :: currentTime
 
@@ -74,7 +74,7 @@ print '(a)', currentTime
 	alpha = 6.0d0 !
 	tp0 = 5.0d0 !
 	tr0 = 0.0d0 !
-	t0 = 3.0d0
+	t0 = 2.8d0
 	const = sqrt(3.0d0)/(4.0d0*pi)*mu
 !
 ! SCALING PARAMETER
@@ -90,7 +90,7 @@ print '(a)', currentTime
 	xhypo = (1+nmax)/2.
 	yhypo = (1+nmax)/2.
 
-ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx))
+ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), allRuptureTimes(nmax, nmax, 0:itmx))
 ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
        stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
      	sigma(nmax, nmax),      w(nmax, nmax), &
@@ -101,7 +101,6 @@ ALLOCATE( dcorg(ixmax, ixmax) )
 
 ! Creating asperity map with subroutine
 !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
-
 
 ns = ixmax/256
 if(ns.lt.1) ns = 1
@@ -143,8 +142,9 @@ do isim = isim0, isim0
   r_asperity = 100
   call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
 
-  name7 = dir(1:ndir)//'/hetero.org'
-  call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
+  !name7 = dir(1:ndir)//'/hetero.org'
+  name7 = dir(1:ndir)//'/hetero.bin'
+  call write_real_2DArray_bin(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
   write(num, '(i5.5)') ihypo 
   name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -159,6 +159,7 @@ do isim = isim0, isim0
   STAGE: do iter = 0, npower ! loop over different scales
     kmax = itmx
     ns = nscale**iter ! scale factor determines how many original grid cells are aggregated into one cell. nscale = 4 by default
+    allRuptureTimes = 0.0d0
 
 ! RENORMALIZATION
     nmax2 = nmax*nscale**iter ! nmax: number of grid cells in coarse grid, nmax2: "physical" size of region that coarse grid spans, in elementary grid cells
@@ -337,6 +338,7 @@ do isim = isim0, isim0
         enddo
       enddo
 
+      allRuptureTimes(:,:,k) = irup ! store rupture times in book keeping array
       !write(*,*) maxval(abs(dtau_offset))
 
 !      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
@@ -370,6 +372,12 @@ do isim = isim0, isim0
         enddo
         close(13)
 
+        !!! Writing new book-keeping files for python here !!!
+        name99 = 'ruptureTimes'//num2(1:1)//'.bin'
+        write(*,*) name99
+        write(*,*) maxval(allRuptureTimes)
+        call write_real_3DArray_bin(allRuptureTimes, name99)
+
         coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
 	dsreal = 4.d0*ns*ds
 	dtreal = dsreal/(2.*alpha*1000.)
@@ -399,7 +407,7 @@ do isim = isim0, isim0
 
       endif
 
-      if(iter.ne.npower.and.icheck.eq.1) then
+      if(iter.ne.npower.and.icheck.eq.1) then ! move to next stage if appropriate
         itmx1 = k - 1
         write(6,*) "returning at ...", itmx1
         exit TIME
