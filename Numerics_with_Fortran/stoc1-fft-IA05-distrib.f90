@@ -15,7 +15,8 @@ INTEGER npower, nscale, ixmax, itmx
 PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
-REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, allRuptureTimes, allSlips! I made some new book-keeping arrays, to be written and exported to python
+REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
+allRuptureTimes, allSlips, allOffplaneStresses! I made some new book-keeping arrays, to be written and exported to python
 REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
 	stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
@@ -38,14 +39,20 @@ DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
 EXTERNAL ker31s, ran1
-CHARACTER*100 :: savePath1
-CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, name98, name99, dir, param_file
+CHARACTER*72 :: savePath1
+CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
+    name95, name96, name97, name98, name99, dir, param_file
 CHARACTER*5  num, num2
 CHARACTER(10) :: currentTime
 
+! Say hello by printing system time
 call date_and_time(TIME=currentTime)
 print '(a)', currentTime
-! PARAMETER FILE
+
+! Set data save path(s)
+savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/'
+
+! READ FROM PARAMETER FILE
         param_file = "IA05.prm"
         open(11, file=param_file, status="old", err=99)
         read(11,*) isim0
@@ -91,10 +98,11 @@ print '(a)', currentTime
 	xhypo = (1+nmax)/2.
 	yhypo = (1+nmax)/2.
 
-ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), allRuptureTimes(nmax, nmax, 0:itmx), allSlips(nmax, nmax, 0:itmx))
+ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), &
+allRuptureTimes(nmax, nmax, 0:itmx), allSlips(nmax, nmax, 0:itmx), allOffplaneStresses(nmax, nmax, 0:itmx))
 ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
        stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
-     	sigma(nmax, nmax),      w(nmax, nmax), &
+     	 sigma(nmax, nmax),      w(nmax, nmax), &
      	   iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
 ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
 ALLOCATE( dcorg(ixmax, ixmax) )
@@ -120,6 +128,14 @@ write(12, '(5f10.3)') mu, alpha, tp0, tr0, t0
 write(12, '(4f10.3)') dc0, dcmax, r0, rini
 write(12, '(4i10)') ndense, nscale2, npower2, nhypo
 close(12)
+
+name95 = 'params4python.dat'
+open(22, file=savePath1//name95)
+write(22, '(1i5)')  nmax
+write(22, '(1i5)')  nmax
+write(22, '(1i5)')  itmx+1
+write(22, '(f9.3)') offset
+close(22)
 
 !!
 !! ITERATION OF HYPOCENTER LOCATION
@@ -200,7 +216,7 @@ do isim = isim0, isim0
         sigma(i,j) = tp(i,j) ! current shear strength?
         a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! slope of linear slip-weakening law
         iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
-	irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
+	      irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
         
         if (iter.eq.0) then ! first rupture initiation if program is at first scale stage!
           rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds ! get distance to hypocenter for current cell
@@ -229,7 +245,7 @@ do isim = isim0, isim0
             m = (j-1)/nscale + 1 + (nscale-1)*nmax/(2*nscale)
             if( vel2(i,j,k).ne.0. )then
               vel(l,m,n) = vel(l,m,n) + &
-		vel2(i,j,k)/(nscale*nscale*nscale) ! transfer slip velocities temporarily saved in vel2 (see below) to new indices
+		          vel2(i,j,k)/(nscale*nscale*nscale) ! transfer slip velocities temporarily saved in vel2 (see below) to new indices
             endif
           enddo
         enddo
@@ -341,6 +357,7 @@ do isim = isim0, isim0
 
       allRuptureTimes(:,:,k) = irup ! store rupture times in book keeping array
       allSlips(:,:,k) = w
+      allOffplaneStresses(:,:,k) = dtau_offset
       !write(*,*) maxval(abs(dtau_offset))
 
 !      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
@@ -375,11 +392,14 @@ do isim = isim0, isim0
         close(13)
 
         !!! Writing new book-keeping files for python here !!!
-        savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/'
         name99 = 'ruptureTimes'//num2(1:1)//'.bin'
         name98 = 'slipHistories'//num2(1:1)//'.bin'
+        name97 = 'offPlaneStress'//num2(1:1)//'.bin'
+        name96 = 'heterogeneity'//num2(1:1)//'.bin'
         call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
         call write_real_3DArray_bin(allSlips, savePath1//name98)
+        call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
+        call write_real_2DArray_bin(dc*ns, savePath1//name96)
 
         coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
 	dsreal = 4.d0*ns*ds
