@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
+from plotSnapshot import plotSnapshot
+from loadBinData  import loadSnapshot, loadParameters
 
-nx = 64
-ny = 64
-nt = 501
-timeIndex = 70
+scaleIndex = 0
+timeIndex  = 100
 
-ruptureTimes = np.fromfile("ruptureTimes1.bin", dtype=np.float64) \
-      .reshape((nx, ny, nt), order='F')
-slipHistories = np.fromfile("slipHistories1.bin", dtype=np.float64) \
-      .reshape((nx, ny, nt), order='F')
+paramFile = "params4python.dat"
+nx, ny, nt, offset = loadParameters(paramFile)
+nx = int(nx)
+ny = int(ny)
+nt = int(nt)
 
-rtSlice = ruptureTimes[:, :, timeIndex]
+baseNames = ["heterogeneity", "ruptureTimes", "slipHistories", "offPlaneStress"]
+titles2by2 = ["Heterogeneity", "Rupture time", "Slip", "Offplane Stress"]
+shapes = [(nx, ny), (nx, ny, nt), (nx, ny, nt), (nx, ny, nt)]
 
-fig=plt.figure(1)
-plt.contourf(ruptureTimes[:, :, timeIndex])
-plt.title("Rupture time")
-plt.colorbar()
+hetero, rupTimes, slip, offPlaneStress = loadSnapshot(scaleIndex, timeIndex, baseNames, shapes)
+plotSnapshot(hetero, rupTimes, slip, offPlaneStress, titles2by2, globalTitle=f"Offset = {offset:.3f}")
 
-fig=plt.figure(2)
-plt.contourf(ruptureTimes[:, :, timeIndex])
-plt.title("Slip")
-plt.colorbar()
+
+
+
+
 
