@@ -39,7 +39,7 @@ DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
 EXTERNAL ker31s, ran1
-CHARACTER*72 :: savePath1
+CHARACTER*80 :: savePath1
 CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
     name95, name96, name97, name98, name99, dir, param_file
 CHARACTER*5  num, num2
@@ -50,7 +50,7 @@ call date_and_time(TIME=currentTime)
 print '(a)', currentTime
 
 ! Set data save path(s)
-savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/'
+savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/'
 
 ! READ FROM PARAMETER FILE
         param_file = "IA05.prm"
@@ -117,7 +117,7 @@ if(ns.lt.1) ns = 1
 !name7 = dir(1:ndir)//'/hetero.org'
 !call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
-offset = 10.d0 ! z-coordinate of off-plane measurement plane
+offset = 20.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
 
