@@ -10,4 +10,5 @@ VARIABLES = {
     "heterogeneity": VariableSpec("heterogeneity", ("nx", "ny"), False),
     "ruptureTimes": VariableSpec("ruptureTimes", ("nx", "ny", "nt"), True),
     "slipHistories": VariableSpec("slipHistories", ("nx", "ny", "nt"), True),
-    "offPlaneStress": VariableSpec("offPlaneStress", ("nx", "ny", "nt"), True)}
+    "offPlaneStress": VariableSpec("offPlaneStress", ("nx", "ny", "nt"), True),
+    "onPlaneStress": VariableSpec("onPlaneStress", ("nx", "ny", "nt"), True)}
