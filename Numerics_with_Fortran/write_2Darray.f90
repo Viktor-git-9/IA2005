@@ -69,9 +69,36 @@ SUBROUTINE write_real_2DArray_bin(data, filename)
 
 END SUBROUTINE
 
+SUBROUTINE write_cmplx_2DArray_bin(data, filename)
+    IMPLICIT NONE
+    DOUBLE COMPLEX, intent(in) :: data(:,:)
+    CHARACTER(len=*), intent(in) :: filename
+
+    write(*,*) "Writing to file..."
+    open(unit=19, file=filename, form="unformatted", access="stream")
+    write(19) data
+    close(19)
+    write(*,*) "File written!"
+    write(*,*) filename
+
+END SUBROUTINE
+
 SUBROUTINE write_real_3DArray_bin(data, filename)
     IMPLICIT NONE
     DOUBLE PRECISION, intent(in) :: data(:,:,:)
+    CHARACTER(len=*), intent(in) :: filename
+
+    write(*,*) "Writing to file..."
+    open(unit=19, file=filename, form="unformatted", access="stream")
+    write(19) data
+    close(19)
+    write(*,*) "File written!"
+
+END SUBROUTINE
+
+SUBROUTINE write_cmplx_3DArray_bin(data, filename)
+    IMPLICIT NONE
+    DOUBLE COMPLEX, intent(in) :: data(:,:,:)
     CHARACTER(len=*), intent(in) :: filename
 
     write(*,*) "Writing to file..."

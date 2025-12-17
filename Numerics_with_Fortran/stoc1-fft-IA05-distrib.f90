@@ -39,9 +39,11 @@ DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
 DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
 EXTERNAL ker31s, ran1
-CHARACTER*80 :: savePath1
+CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
+CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/kernels/' ! use this save path to store and load the Green's function kernel files once they are calculated
 CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
-    name94, name95, name96, name97, name98, name99, dir, param_file
+    name94, name95, name96, name97, name98, name99, dir, param_file, &
+    name93, name92, name91, name90
 CHARACTER*5  num, num2
 CHARACTER(10) :: currentTime
 
@@ -49,54 +51,51 @@ CHARACTER(10) :: currentTime
 call date_and_time(TIME=currentTime)
 print '(a)', currentTime
 
-! Set data save path(s)
-savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/'
-
 ! READ FROM PARAMETER FILE
-        param_file = "IA05.prm"
-        open(11, file=param_file, status="old", err=99)
-        read(11,*) isim0
-        close(11)
+param_file = "IA05.prm"
+open(11, file=param_file, status="old", err=99)
+read(11,*) isim0
+close(11)
         
 !
 ! FIXED PARAMETER
 !
-	pi = acos(-1.0d0)
-        facbiem = 2.0d0
-	ds = 1.0d0 ! mm
-	dt = ds/facbiem
-	kmin = itmx/nscale
+pi = acos(-1.0d0)
+      facbiem = 2.0d0
+ds = 1.0d0 ! mm
+dt = ds/facbiem
+kmin = itmx/nscale
 ! for FFT
-	facfft = 1.0d0/(ndata1*ndata2)
-	ndata(1) = ndata1
-	ndata(2) = ndata2
+facfft = 1.0d0/(ndata1*ndata2)
+ndata(1) = ndata1
+ndata(2) = ndata2
 !
 ! OUTPUT DIRECTORY
 !
-	dir = '.'
-        ndir = index(dir, ' ')-1
+dir = '.'
+      ndir = index(dir, ' ')-1
 !
 ! SCALE-INDEPENDENT PARAMETER
 !
-	mu = 32.40d0 !GPa
-	alpha = 6.0d0 !
-	tp0 = 5.0d0 !
-	tr0 = 0.0d0 !
-	t0 = 2.8d0
-	const = sqrt(3.0d0)/(4.0d0*pi)*mu
+mu = 32.40d0 !GPa
+alpha = 6.0d0 !
+tp0 = 5.0d0 !
+tr0 = 0.0d0 !
+t0 = 2.8d0
+const = sqrt(3.0d0)/(4.0d0*pi)*mu
 !
 ! SCALING PARAMETER
 ! unit (mu) = mu [GPa]/tb[MPa] dc0[m]/ds [km] = 1
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
-	dc0 = 0.250d0*ds
-	r0 = 5.6250d0*ds
-	rini = 3.75d0*ds
-	ndense = 4
-	dim = -2.0
-	xhypo = (1+nmax)/2.
-	yhypo = (1+nmax)/2.
+dc0 = 0.250d0*ds
+r0 = 5.6250d0*ds
+rini = 3.75d0*ds
+ndense = 4
+dim = -2.0
+xhypo = (1+nmax)/2.
+yhypo = (1+nmax)/2.
 
 ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), &
 allRuptureTimes(nmax, nmax, 0:itmx), allSlips(nmax, nmax, 0:itmx), &
@@ -118,9 +117,28 @@ if(ns.lt.1) ns = 1
 !name7 = dir(1:ndir)//'/hetero.org'
 !call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
+! Calculating Green's function Kernels on fault plane and offplane
 offset = 10.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
+
+! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
+! This can be commented out once the Kernel has been generated and saved.
+!open(12, file=savePath2 // 'p000_val.dat')
+!write(12, '(5f10.3)') p000
+!close(12)
+
+!call write_cmplx_2DArray_bin(zker, savePath2 // 'zker.bin')
+!write(*,*) 'Made it here :)'
+
+! Loading p000 and the Kernel from their respective files
+open(12, file=savePath2 // 'p000_val.dat', status="old")
+read(12,*) p000
+close(12)
+
+open(unit=19, file=savePath2 // 'zker.bin', form="unformatted", access="stream")
+read(19) zker
+close(19)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 open(12, file=name2)
