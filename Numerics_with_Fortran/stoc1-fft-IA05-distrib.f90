@@ -12,7 +12,7 @@ IMPLICIT NONE
 !
 INTEGER nmax, ndata1, ndata2
 INTEGER npower, nscale, ixmax, itmx
-PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
+PARAMETER ( nmax = 128, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
 REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -34,10 +34,10 @@ INTEGER :: i, j, k, l, m, n, ndir, idata, ix, iy, &
 		ndense, nasp, idum, iscale, ihypo, isim, isim0, nhypo, &
 		nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2
 INTEGER :: ndata(2)
-DOUBLE COMPLEX zdata(ndata1*ndata2), zresp(ndata1*ndata2), zresp_offset(ndata1*ndata2)
-DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
-DOUBLE COMPLEX zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx)
-DOUBLE COMPLEX zans(ndata1*ndata2), zans_offset(ndata1*ndata2)
+complex(kind=kind(0d0)), allocatable :: &
+zdata(:), zresp(:), zresp_offset(:), zans(:), zans_offset(:)
+complex(kind=kind(0d0)), allocatable :: &
+zvel(:,:), zker(:,:), zker_offset(:,:)
 EXTERNAL ker31s, ran1
 CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
 CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/kernels/' ! use this save path to store and load the Green's function kernel files once they are calculated
@@ -97,6 +97,7 @@ dim = -2.0
 xhypo = (1+nmax)/2.
 yhypo = (1+nmax)/2.
 
+! Allocations
 ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), &
 allRuptureTimes(nmax, nmax, 0:itmx), allSlips(nmax, nmax, 0:itmx), &
 allOnplaneStresses(nmax, nmax, 0:itmx), allOffplaneStresses(nmax, nmax, 0:itmx) )
@@ -106,6 +107,9 @@ ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
      	   iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
 ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
 ALLOCATE( dcorg(ixmax, ixmax) )
+ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), zresp_offset(ndata1*ndata2), &
+ zans(ndata1*ndata2), zans_offset(ndata1*ndata2))
+ALLOCATE(zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx))
 
 
 ! Creating asperity map with subroutine
@@ -118,7 +122,7 @@ if(ns.lt.1) ns = 1
 !call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
 ! Calculating Green's function Kernels on fault plane and offplane
-offset = 10.d0 ! z-coordinate of off-plane measurement plane
+offset = 3.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
 
@@ -132,13 +136,13 @@ call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facb
 !write(*,*) 'Made it here :)'
 
 ! Loading p000 and the Kernel from their respective files
-open(12, file=savePath2 // 'p000_val.dat', status="old")
-read(12,*) p000
-close(12)
+!open(12, file=savePath2 // 'p000_val.dat', status="old")
+!read(12,*) p000
+!close(12)
 
-open(unit=19, file=savePath2 // 'zker.bin', form="unformatted", access="stream")
-read(19) zker
-close(19)
+!open(unit=19, file=savePath2 // 'zker.bin', form="unformatted", access="stream")
+!read(19) zker
+!close(19)
 
 name2 = dir(1:ndir)//'/hoge2.dat'
 open(12, file=name2)

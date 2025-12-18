@@ -83,7 +83,7 @@ SUBROUTINE make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, 
   do i = 0, ixmax
     do j = 0, ixmax
       rad = sqrt((i-x0(ihypo))**2 + (j-y0(ihypo))**2)
-      !if(rad.lt.r_asperity) dcorg(i,j) = dc0
+      !if(rad.lt.r_asperity) dcorg(i,j) = dc0 ! this can be used to insert a single circular asperity.
     enddo
   enddo
   write(*,*) "Hom. asperity map done!"
