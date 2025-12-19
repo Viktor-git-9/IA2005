@@ -109,7 +109,7 @@ ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
 ALLOCATE( dcorg(ixmax, ixmax) )
 ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), zresp_offset(ndata1*ndata2), &
  zans(ndata1*ndata2), zans_offset(ndata1*ndata2))
-ALLOCATE(zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx))
+ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx))
 
 
 ! Creating asperity map with subroutine
