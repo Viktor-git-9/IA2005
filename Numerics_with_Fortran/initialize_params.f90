@@ -47,28 +47,58 @@ CONTAINS
     SUBROUTINE long_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, t0, tp0, &
          tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
         IMPLICIT NONE
-        INTEGER :: i, j, nmax, iter, ns
+        INTEGER :: i, j, nmax, iter, ns, tauyBandThickness, tau0BandThickness
         INTEGER :: iv(nmax, nmax), irup(nmax, nmax)
         DOUBLE PRECISION :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
         DOUBLE PRECISION :: w(nmax, nmax), tau0(nmax, nmax), tp(nmax, nmax), &
         tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
-
+        write(*,*) "Setting up long asperity friction law..."
         do i = 1, nmax
             do j = 1, nmax
-                tr(i, j) = tr0 ! assign residual stress, uniform everywhere
-                if (abs((nmax+1)/2 - j) < (nmax - 1)/2) then ! assign critical stress...
-                    tp(i,j) = 10.d0 ! high at boundaries...
-                else
-                    tp(i,j) = 0.98d0 ! and low inbetween.
-                endif
 
-                if (abs((nmax+1)/2 - j) > (nmax-14)/2) then ! assign initial stress
-                    tau0(i,j) = 1.d0
-                else
-                    tau0(i,j) = 0.4d0
-                endif
+                w(i,j) = 0.0d0 ! time integrated slip, set to 0
+                dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
+                iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
+	            irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
+                tr(i, j) = tr0 ! assign residual stress, uniform everywhere
+
+                tauybandThickness = 2 ! thickness of high-strength boundary bands
+                tau0BandThickness = 20 ! thickness of low-initial-stress boundary bands
+
+                if (i <= tauybandThickness) then ! assign critical stress as band structure...
+                        tp(i,j) = 10.d0! high at boundaries...
+                    else if ( i > nmax - tauybandThickness ) then
+                        tp(i,j) = 10.d0 ! high at boundaries...
+                    else
+                        tp(i,j) = 0.98d0 ! and low inbetween.                    
+                end if
+
+                if (i <= tau0BandThickness) then ! assign initial stress as band structure...
+                        tau0(i,j) = 0.4d0 ! low at boundaries...
+                    else if ( i > nmax - tau0BandThickness ) then
+                        tau0(i,j) = 0.4d0 ! low at boundaries...
+                    else
+                        tau0(i,j) = 1.d0 ! and high inbetween.                    
+                end if
+
+                sigma(i,j) = tp(i,j) ! set shear strength
+                a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! set slope of linear slip-weakening law
 
             enddo
         enddo
+
+        do i = 1, nmax
+            do j = 1, nmax
+                if(tau0(i,j).ge.tp(i,j)) then
+                    iv(i,j) = 2
+                endif
+            enddo
+        enddo
     END SUBROUTINE
+
+!    SUBROUTINE circular_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, t0, tp0, &
+!         tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
+!        IMPLICIT NONE
+!        ! To be implemented
+!    END SUBROUTINE
 END MODULE iniParams
