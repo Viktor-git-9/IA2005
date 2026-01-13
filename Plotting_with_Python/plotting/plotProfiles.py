@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 def getProfiles(data, profileDim, profileInd):
     match profileDim:
         case "x":
-            profile = data[:, profileInd]
-        case "y":
             profile = data[profileInd, :]
+        case "y":
+            profile = data[:, profileInd]
         case _:
             raise ValueError("Unknown plotting direction.")
     return profile
@@ -105,22 +105,18 @@ def plotProfiles2x2plus1(datalist, titles=None, globalTitle='none'):
     plt.tight_layout()
     plt.show()
     
-def plotProfiles(data, labels, plotDim, plotInd, globalTitle='none',):
+def plotProfiles(data, axesLabels, lineLabels, globalTitle='none',):
     fig = plt.figure(figsize=(12, 10))
     ax = fig.add_axes([0, 0, 1, 1], frameon=False)
-    for arr, linelabel in zip(data, labels):
-        match plotDim:
-            case "x":
-                profile = arr[:,plotInd]
-            case "y":
-                profile = arr[plotInd, :]
-            case _:
-                raise ValueError("Unknown plotting direction.")
-                
+    
+    for profile, linelabel in zip(data, lineLabels):              
         ax.plot(profile, label=linelabel, linewidth=3)
     plt.grid()
     plt.legend()
     plt.show
-        
+    
+    ax.set_xlabel(axesLabels[0])
+    ax.set_ylabel(axesLabels[1])
+       
     if globalTitle is not None:
         fig.suptitle(globalTitle, fontsize=16)

@@ -29,7 +29,6 @@ def loadBinArray(filename, shape, dtype=np.float64):
     -------
     numpy array with given shape, Fortran memory order.
     """
-
     arr = np.fromfile(filename, dtype=dtype) \
                 .reshape(shape, order='F')
     return arr
