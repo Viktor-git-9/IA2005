@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 
 def getProfiles(data, profileDim, profileInd):
     match profileDim:
-        case "x":
-            profile = data[profileInd, :]
-        case "y":
+        case "x": # In the Fortran data, the first index corresponds to x...
             profile = data[:, profileInd]
+        case "y": # ... and the second to y.
+            profile = data[profileInd, :]
         case _:
             raise ValueError("Unknown plotting direction.")
     return profile

@@ -88,5 +88,6 @@ def loadVarsAtTime(run, scale, timeIndex):
     run.load("heterogeneity", scale),
     run.load("ruptureTimes", scale, timeIndex),
     run.load("slipHistories", scale, timeIndex),
-    run.load("offPlaneStress", scale, timeIndex)
+    run.load("offPlaneStress", scale, timeIndex),
+    run.load("slipVelocities", scale, timeIndex)
 )

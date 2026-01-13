@@ -60,7 +60,7 @@ def plotContours(data, titles=None, cbarLabels=None, cmap='inferno', globalTitle
         
     # plot plot plot 
     for ax, arr, title, cbarLabel in zip(axes, data, titles, cbarLabels):
-        im = ax.imshow(arr, cmap=cmap, origin='lower')
+        im = ax.imshow(arr.T, cmap=cmap, origin='lower')
         ax.set_aspect('equal')      # <- enforces square axes
         ax.set_title(title)
         cbar = plt.colorbar(im, ax=ax)
@@ -99,7 +99,7 @@ def plotContour2x2(data1, data2, data3, data4, titles=None, cmap='inferno', glob
     arrays = [data1, data2, data3, data4]
     
     for ax, arr, title in zip(axes.ravel(), arrays, titles):
-        im = ax.imshow(arr, cmap=cmap, origin='lower', aspect='auto')
+        im = ax.imshow(arr.T, cmap=cmap, origin='lower', aspect='auto')
         
         ax.set_title(title)
         plt.colorbar(im, ax=ax)
@@ -133,7 +133,7 @@ def plotContour2x2plus1(data1, data2, data3, data4, data5=None, titles=None, cma
     arrays = [data1, data2, data3, data4]
     
     for ax, arr, title in zip(axes.ravel(), arrays, titles):
-        im = ax.imshow(arr, cmap=cmap, origin='lower', aspect='auto')
+        im = ax.imshow(arr.T, cmap=cmap, origin='lower', aspect='auto')
         
         ax.set_title(title)
         plt.colorbar(im, ax=ax)
