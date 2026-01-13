@@ -13,7 +13,7 @@ IMPLICIT NONE
 !
 INTEGER nmax, ndata1, ndata2
 INTEGER npower, nscale, ixmax, itmx
-PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
+PARAMETER ( nmax = 64, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
 REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -44,7 +44,7 @@ CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/C
 CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/kernels/' ! use this save path to store and load the Green's function kernel files once they are calculated
 CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
     name94, name95, name96, name97, name98, name99, dir, param_file, &
-    name93, name92, name91, name90
+    name93, name92, name91, name90, name100
 CHARACTER*5  num, num2
 CHARACTER(10) :: currentTime
 
@@ -90,13 +90,13 @@ const = sqrt(3.0d0)/(4.0d0*pi)*mu ! some constant for conversion
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
-dc0 = 0.250d0*ds
-r0 = 5.6250d0*ds
-rini = 3.75d0*ds
-ndense = 4
-dim = -2.0
-xhypo = (1+nmax)/2.
-yhypo = (1+nmax)/2.
+dc0 = 0.50d0*ds ! fracture energy [m], default 0.250*ds
+r0 = 5.6250d0*ds ! asperity radius [m], default 5.625*ds
+rini = 3.75d0*ds ! initialization radius [m], default 3.75*ds
+ndense = 4 ! density of asperity, default 4
+dim = -2.0 ! fractal dimension, default -2.0
+xhypo = (1+nmax)/2. ! hypocenter location at the center of the fault plane
+yhypo = (1+nmax)/2. ! hypocenter location at the center of the fault plane
 
 ! Allocations
 ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), &
@@ -123,15 +123,15 @@ if(ns.lt.1) ns = 1
 !call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
 ! Calculating Green's function Kernels on fault plane and offplane
-offset = 0.d0 ! z-coordinate of off-plane measurement plane
+offset = 5.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
 
 write(*,*) "p000:"
-write(*,*) p000_offset
+write(*,*) p000
 
 write(*,*) "zker:"
-write(*,*) maxval(abs(zker_offset))
+write(*,*) maxval(abs(zker))
 
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
@@ -191,8 +191,8 @@ do isim = isim0, isim0
   !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
   !name7 = dir(1:ndir)//'/hetero.org'
-  name7 = dir(1:ndir)//'/hetero.bin'
-  call write_real_2DArray_bin(dble(dcorg), name7) ! write dc to a file using self-written subroutine
+  !name7 = dir(1:ndir)//'/hetero.bin'
+  !call write_real_2DArray_bin(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
   write(num, '(i5.5)') ihypo 
   name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -237,9 +237,11 @@ do isim = isim0, isim0
     vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
     smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
-    call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
+    call long_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
     t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
 
+    name7 = dir(1:ndir)//'/frictionlaw.dat'
+    call write_real_2DArray(tau0, name7)
    ! do i = 1, nmax ! loop over all x-positions
    !   do j = 1, nmax ! loop over all y-positions
    !     w(i,j) = 0.0d0 ! time integrated slip, set to 0
@@ -358,7 +360,7 @@ do isim = isim0, isim0
 	      else
                 vel(i,j,k)  = (dsigma - dtau)/(const*p000 + a(i,j)*dt) ! if the criterion does not hold, assign velo according to slightly altered law
                 if((w(i,j)+vel(i,j,k)*dt).gt.dc(i,j)) then
-                  vel(i,j,k) = ( tr(i,j) - dtau)/(const*p000)
+                  vel(i,j,k) = (tr(i,j) - dtau)/(const*p000)
                 endif
 	      endif
               if(vel(i,j,k).lt.0.) then ! if slip velo becomes negative, set it to 0 and assign the cell as locked
@@ -432,12 +434,14 @@ do isim = isim0, isim0
         name97 = 'offPlaneStress'//num2(1:1)//'.bin'
         name96 = 'heterogeneity'//num2(1:1)//'.bin'
         name94 = 'onPlaneStress'//num2(1:1)//'.bin'
+        name100 = 'slipVelocities'//num2(1:1)//'.bin'
         write(*,*) shape(dc*ns)
         call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
         call write_real_3DArray_bin(allSlips, savePath1//name98)
         call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
         call write_real_2DArray_bin(dc*ns, savePath1//name96)
         call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
+        call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
         coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
 	dsreal = 4.d0*ns*ds
