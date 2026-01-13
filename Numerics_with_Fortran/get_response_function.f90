@@ -18,6 +18,10 @@ CONTAINS
             REAL(8), intent(in) :: c1,c2,c3,t,w
             end function ker31s
 
+            REAL(8) FUNCTION ker32s(c1,c2,c3,t,w)
+            REAL(8), intent(in) :: c1,c2,c3,t,w
+            end function ker32s
+
             REAL(8) FUNCTION ker33s(c1,c2,c3,t,w)
             REAL(8), intent(in) :: c1,c2,c3,t,w
             end function ker33s
@@ -51,7 +55,30 @@ CONTAINS
                     enddo
                 enddo
 
-            case (33)
+        case (32)
+                p000 = ker32s(0.0d0, 0.0d0, offset, 0.0d0, facbiem)
+                do k = 1, itmx
+                    do idata=1, ndata1*ndata2
+                    zresp(idata) = cmplx(0.0d0, 0.0d0)
+                    enddo
+                    do i = 1-nmax, nmax-1
+                        ix = i + 1
+                        if(i.lt.0) ix = ix + ndata1
+                        do j = 1-nmax, nmax-1
+                            piece1 = ker32s(dble(i), dble(j), offset, dble(k), facbiem)
+                            iy = j + 1
+                            if(j.lt.0) iy = iy + ndata2
+                            idata = ix + (iy-1)*ndata1
+                            zresp(idata) = cmplx(piece1, 0.0d0)
+                        enddo
+                    enddo
+                    call fourn(zresp, ndata, 2, 1)
+                    do idata=1, ndata1*ndata2
+                        zker(idata, k) = zresp(idata)
+                    enddo
+                enddo
+
+        case (33)
                 p000 = ker33s(0.0d0, 0.0d0, offset, 0.0d0, facbiem)
                 do k = 1, itmx
                     do idata=1, ndata1*ndata2

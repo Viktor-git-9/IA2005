@@ -8,11 +8,12 @@ PROGRAM main
 use getResponse
 use writeArrays
 use makeDCmap
+use iniParams
 IMPLICIT NONE
 !
 INTEGER nmax, ndata1, ndata2
 INTEGER npower, nscale, ixmax, itmx
-PARAMETER ( nmax = 128, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
+PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower )
 PARAMETER ( itmx = 500 )
 PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
 REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -22,7 +23,7 @@ REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
 REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
 REAL(8) :: pi, mu, const, facbiem, facfft, &
 		tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
-		p000, p000_offset, ker31s, dtau, dsigma, alpha, &
+		p000, p000_offset, ker31s, ker32s, dtau, dsigma, alpha, &
 		ds, dt, rad, r0, rini, xhypo, yhypo, &
 		xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
 		t, piece1, piece1_offset, ans, offset, ans_offset, r_asperity
@@ -38,7 +39,7 @@ complex(kind=kind(0d0)), allocatable :: &
 zdata(:), zresp(:), zresp_offset(:), zans(:), zans_offset(:)
 complex(kind=kind(0d0)), allocatable :: &
 zvel(:,:), zker(:,:), zker_offset(:,:)
-EXTERNAL ker31s, ran1
+EXTERNAL ker31s, ker32s, ran1
 CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
 CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/kernels/' ! use this save path to store and load the Green's function kernel files once they are calculated
 CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
@@ -61,7 +62,7 @@ close(11)
 ! FIXED PARAMETER
 !
 pi = acos(-1.0d0)
-      facbiem = 2.0d0
+facbiem = 2.0d0
 ds = 1.0d0 ! mm
 dt = ds/facbiem
 kmin = itmx/nscale
@@ -77,15 +78,15 @@ dir = '.'
 !
 ! SCALE-INDEPENDENT PARAMETER
 !
-mu = 32.40d0 !GPa
-alpha = 6.0d0 !
-tp0 = 5.0d0 !
-tr0 = 0.0d0 !
-t0 = 2.8d0
-const = sqrt(3.0d0)/(4.0d0*pi)*mu
+mu = 32.40d0 ! medium rigidity [GPa]
+alpha = 6.0d0 ! P-wave velocity [km/s]
+tp0 = 5.0d0 ! yield stress for slip weakening [MPa]
+tr0 = 0.0d0 ! residual stress [MPa]
+t0  = 2.8d0  ! initial stress [MPa] Default value 2.8 MPa.
+const = sqrt(3.0d0)/(4.0d0*pi)*mu ! some constant for conversion
 !
 ! SCALING PARAMETER
-! unit (mu) = mu [GPa]/tb[MPa] dc0[m]/ds [km] = 1
+! unit (mu) = mu [GPa]/tb[MPa] dc0[m]/ds [km] = 1 (whole product)
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
@@ -122,9 +123,15 @@ if(ns.lt.1) ns = 1
 !call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
 ! Calculating Green's function Kernels on fault plane and offplane
-offset = 3.d0 ! z-coordinate of off-plane measurement plane
+offset = 0.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
+
+write(*,*) "p000:"
+write(*,*) p000_offset
+
+write(*,*) "zker:"
+write(*,*) maxval(abs(zker_offset))
 
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
@@ -163,7 +170,7 @@ close(22)
 !!
 !! ITERATION OF HYPOCENTER LOCATION
 !!
-!! isim0 red by a parameter file
+!! isim0 read by a parameter file
 do isim = isim0, isim0
   ihypo = isim
 !! test 
@@ -181,6 +188,7 @@ do isim = isim0, isim0
 
   r_asperity = 100
   call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
+  !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
   !name7 = dir(1:ndir)//'/hetero.org'
   name7 = dir(1:ndir)//'/hetero.bin'
@@ -229,30 +237,33 @@ do isim = isim0, isim0
     vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
     smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
-    do i = 1, nmax ! loop over all x-positions
-      do j = 1, nmax ! loop over all y-positions
-        w(i,j) = 0.0d0 ! time integrated slip, set to 0
-        tau0(i,j) = t0 ! background stress<ftau0
-        tp(i,j) = tp0 ! peak strength parameter for cell, set to uniform tp0
-        tr(i,j) = tr0 ! residual strength after failure, uniform tr0
-        dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
-        sigma(i,j) = tp(i,j) ! current shear strength?
-        a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! slope of linear slip-weakening law
-        iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
-	      irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
-        
-        if (iter.eq.0) then ! first rupture initiation if program is at first scale stage!
-          rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds ! get distance to hypocenter for current cell
-          if ( rad.le.rini ) then ! if distance is smaller than initialization radius:
-            tp(i,j) = 0.0d0 ! set cell strength to zero
-            dc(i,j) = 0.0d0 ! set rupture energy to zero
-            a(i,j) = 0.0d0 ! set slope of slip weakening to zero
-            sigma(i,j) = tp(i,j) ! set shear strength to zero
-            iv(i,j) = 2 ! set state variable to "failed!" -> rupture now has initialized at this cell!
-	  endif
-	endif
-      enddo
-    enddo
+    call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
+    t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
+
+   ! do i = 1, nmax ! loop over all x-positions
+   !   do j = 1, nmax ! loop over all y-positions
+   !     w(i,j) = 0.0d0 ! time integrated slip, set to 0
+   !     tau0(i,j) = t0 ! background stress<tau0
+   !     tp(i,j) = tp0 ! peak strength parameter for cell, set to uniform tp0
+   !     tr(i,j) = tr0 ! residual strength after failure, uniform tr0
+   !     dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
+   !     sigma(i,j) = tp(i,j) ! current shear strength?
+   !     a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! slope of linear slip-weakening law
+   !     iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
+	 !     irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
+   !     
+   !     if (iter.eq.0) then ! first rupture initiation if program is at first scale stage!
+   !       rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds ! get distance to hypocenter for current cell
+   !       if ( rad.le.rini ) then ! if distance is smaller than initialization radius:
+   !         tp(i,j) = 0.0d0 ! set cell strength to zero
+   !         dc(i,j) = 0.0d0 ! set rupture energy to zero
+   !         a(i,j) = 0.0d0 ! set slope of slip weakening to zero
+   !         sigma(i,j) = tp(i,j) ! set shear strength to zero
+   !         iv(i,j) = 2 ! set state variable to "failed!" -> rupture now has initialized at this cell!
+	 ! endif
+	 ! endif
+   !   enddo
+   ! enddo
 
     if( iter.ne.0 ) then ! after first scale stage:
       kmax = itmx
@@ -421,6 +432,7 @@ do isim = isim0, isim0
         name97 = 'offPlaneStress'//num2(1:1)//'.bin'
         name96 = 'heterogeneity'//num2(1:1)//'.bin'
         name94 = 'onPlaneStress'//num2(1:1)//'.bin'
+        write(*,*) shape(dc*ns)
         call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
         call write_real_3DArray_bin(allSlips, savePath1//name98)
         call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)

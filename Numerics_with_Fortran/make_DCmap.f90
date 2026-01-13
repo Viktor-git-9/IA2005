@@ -25,14 +25,12 @@ SUBROUTINE make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0,
   nscale2 = nscale/2
   npower2 = npower*2
 	nhypo = ndense*(nscale2*nscale2)**npower2
-  write(*,*) nhypo
   write(*,*) "Creating fractal asperity map..."
   ALLOCATE( x0(nhypo), y0(nhypo) )
 
         do iscale = 0,  npower2
           nasp = ndense*(nscale2*nscale2)**(npower2 - iscale)
           r0dum = r0*nscale2**iscale
-          write(*,*) r0dum
           dcdum = dc0*nscale2**iscale
           do ihypo = 1, nasp
             xo = ran1(idum)*ixmax
