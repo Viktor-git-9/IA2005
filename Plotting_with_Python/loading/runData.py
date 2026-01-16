@@ -71,5 +71,7 @@ class runData:
         # return 2D slice if requested and variable has time dimension
         if spec.timeDependent and timeInd is not None:
             return arr[:, :, timeInd]
+        elif spec.timeDependent and timeInd is None:
+            return arr[:, :, :]
     
         return arr

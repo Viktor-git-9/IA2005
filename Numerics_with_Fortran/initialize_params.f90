@@ -53,6 +53,9 @@ CONTAINS
         DOUBLE PRECISION :: w(nmax, nmax), tau0(nmax, nmax), tp(nmax, nmax), &
         tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
         write(*,*) "Setting up long asperity friction law..."
+
+        tauyBandThickness = 2 ! thickness of high-strength boundary bands
+        tau0BandThickness = 20 ! thickness of low-initial-stress boundary bands
         do i = 1, nmax
             do j = 1, nmax
 
@@ -62,12 +65,9 @@ CONTAINS
 	            irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
                 tr(i, j) = tr0 ! assign residual stress, uniform everywhere
 
-                tauybandThickness = 2 ! thickness of high-strength boundary bands
-                tau0BandThickness = 20 ! thickness of low-initial-stress boundary bands
-
-                if (i <= tauybandThickness) then ! assign critical stress as band structure...
+                if (i <= tauyBandThickness) then ! assign critical stress as band structure...
                         tp(i,j) = 10.d0! high at boundaries...
-                    else if ( i > nmax - tauybandThickness ) then
+                    else if ( i > nmax - tauyBandThickness ) then
                         tp(i,j) = 10.d0 ! high at boundaries...
                     else
                         tp(i,j) = 0.98d0 ! and low inbetween.                    
@@ -96,9 +96,53 @@ CONTAINS
         enddo
     END SUBROUTINE
 
-!    SUBROUTINE circular_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, t0, tp0, &
-!         tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
-!        IMPLICIT NONE
-!        ! To be implemented
-!    END SUBROUTINE
+    SUBROUTINE circular_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, t0, tp0, &
+         tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
+        IMPLICIT NONE
+        INTEGER :: i, j, nmax, iter, ns, tauyBandThickness, tau0BandThickness
+        INTEGER :: iv(nmax, nmax), irup(nmax, nmax)
+        DOUBLE PRECISION :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
+        DOUBLE PRECISION :: w(nmax, nmax), tau0(nmax, nmax), tp(nmax, nmax), &
+        tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
+        write (*,*) "Setting up circular asperity friction law..."
+
+        ! Careful: geometric logic is reversed compared to long asperity case!
+        tauyBandThickness = 30 ! thickness of high-strength boundary section
+        tau0BandThickness = 10 ! thickness of low-initial-stress boundary section
+        do i = 1, nmax
+            do j = 1, nmax
+                w(i,j) = 0.0d0 ! time integrated slip, set to 0
+                dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
+                iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
+                irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
+                tr(i, j) = tr0 ! assign residual stress, uniform everywhere
+
+                rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds ! get distance to hypocenter for current cell
+
+                if ( rad.le.tauyBandThickness ) then ! set critical stress as circular band structure...
+                        tp(i,j) = 0.98d0 ! low inside...
+                    else
+                        tp(i,j) = 10.d0 ! and high outside.
+                end if
+
+                if (rad.le.tau0BandThickness ) then ! set initial stress as circular band structure...
+                        tau0(i,j) = 1.d0 ! high inside...
+                    else
+                        tau0(i,j) = 0.4d0 ! and low outside.
+                end if
+
+                sigma(i,j) = tp(i,j) ! set shear strength
+                a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! set slope of linear slip-weakening law
+
+            end do
+        end do
+
+        do i = 1, nmax
+            do j = 1, nmax
+                if(tau0(i,j).ge.tp(i,j)) then
+                    iv(i,j) = 2
+                endif
+            enddo
+        enddo
+    END SUBROUTINE
 END MODULE iniParams

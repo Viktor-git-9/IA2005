@@ -63,7 +63,7 @@ close(11)
 !
 pi = acos(-1.0d0)
 facbiem = 2.0d0
-ds = 1.0d0 ! mm
+ds = 1.0d0 ! spatial grid size
 dt = ds/facbiem
 kmin = itmx/nscale
 ! for FFT
@@ -78,8 +78,8 @@ dir = '.'
 !
 ! SCALE-INDEPENDENT PARAMETER
 !
-mu = 32.40d0 ! medium rigidity [GPa]
-alpha = 6.0d0 ! P-wave velocity [km/s]
+mu =  1! medium rigidity [GPa] Default value 32.40d0
+alpha = sqrt(3.d0) ! P-wave velocity [km/s] Default value 6.0d0
 tp0 = 5.0d0 ! yield stress for slip weakening [MPa]
 tr0 = 0.0d0 ! residual stress [MPa]
 t0  = 2.8d0  ! initial stress [MPa] Default value 2.8 MPa.
@@ -90,7 +90,7 @@ const = sqrt(3.0d0)/(4.0d0*pi)*mu ! some constant for conversion
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
-dc0 = 0.50d0*ds ! fracture energy [m], default 0.250*ds
+dc0 = 0.0d0*ds ! fracture energy [m], default 0.250*ds
 r0 = 5.6250d0*ds ! asperity radius [m], default 5.625*ds
 rini = 3.75d0*ds ! initialization radius [m], default 3.75*ds
 ndense = 4 ! density of asperity, default 4
@@ -126,12 +126,6 @@ if(ns.lt.1) ns = 1
 offset = 5.d0 ! z-coordinate of off-plane measurement plane
 call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
 call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
-
-write(*,*) "p000:"
-write(*,*) p000
-
-write(*,*) "zker:"
-write(*,*) maxval(abs(zker))
 
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
@@ -237,7 +231,7 @@ do isim = isim0, isim0
     vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
     smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
-    call long_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
+    call circular_asperity(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
     t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
 
     name7 = dir(1:ndir)//'/frictionlaw.dat'
@@ -435,7 +429,6 @@ do isim = isim0, isim0
         name96 = 'heterogeneity'//num2(1:1)//'.bin'
         name94 = 'onPlaneStress'//num2(1:1)//'.bin'
         name100 = 'slipVelocities'//num2(1:1)//'.bin'
-        write(*,*) shape(dc*ns)
         call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
         call write_real_3DArray_bin(allSlips, savePath1//name98)
         call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
