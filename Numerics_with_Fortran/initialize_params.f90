@@ -108,7 +108,7 @@ CONTAINS
 
         ! Careful: geometric logic is reversed compared to long asperity case!
         tauyBandThickness = 30 ! thickness of high-strength boundary section
-        tau0BandThickness = 10 ! thickness of low-initial-stress boundary section
+        tau0BandThickness = 16 ! thickness of low-initial-stress boundary section
         do i = 1, nmax
             do j = 1, nmax
                 w(i,j) = 0.0d0 ! time integrated slip, set to 0
