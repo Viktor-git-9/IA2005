@@ -64,7 +64,7 @@ PROGRAM main
    pi = acos(-1.0d0)
    facbiem = 2.0d0
    ds = 1.0d0 ! spatial grid size
-   dt = 1 ! time step, default ds/facbiem = ds/2
+   dt = ds/2 ! time step, default ds/facbiem = ds/2
    kmin = itmx/nscale
 ! for FFT
    facfft = 1.0d0/(ndata1*ndata2)
@@ -78,8 +78,8 @@ PROGRAM main
 !
 ! SCALE-INDEPENDENT PARAMETER
 !
-   mu =  1! medium rigidity [GPa] Default value 32.40d0
-   alpha = sqrt(3.d0) ! P-wave velocity [km/s] Default value 6.0d0
+   mu =  1.0d0! medium rigidity [GPa] Default value 32.40d0
+   alpha = sqrt(3.0d0) ! P-wave velocity [km/s] Default value 6.0d0
    tp0 = 5.0d0 ! yield stress for slip weakening [MPa]
    tr0 = 0.0d0 ! residual stress [MPa]
    t0  = 2.8d0  ! initial stress [MPa] Default value 2.8 MPa.
@@ -90,7 +90,7 @@ PROGRAM main
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
-   dc0 = 0.0d0*ds ! fracture energy [m], default 0.250*ds
+   dc0 = 2.0d0*ds ! fracture energy [m], default 0.250*ds
    r0 = 5.6250d0*ds ! asperity radius [m], default 5.625*ds
    rini = 3.75d0*ds ! initialization radius [m], default 3.75*ds
    ndense = 4 ! density of asperity, default 4
@@ -347,10 +347,13 @@ PROGRAM main
                   else
                      if( iv(i,j).eq.0 ) then ! this is the main velocity update, core of the code! if cell is assigned as locked...
                         vel(i,j,k) = 0.0d0 ! ... set its slip velo to 0.
-                        if( dtau.gt.dsigma ) iv(i,j) = 2 ! but if driving stress exceeds strength, set it as failing
+                        if( dtau.gt.dsigma ) then
+                           iv(i,j) = 2 ! but if driving stress exceeds strength, set it as failing
+                           !write(*,*) "nucleation at ", i, j, k, dtau, dsigma
+                        endif
                      else
                         iv(i,j) = 1 ! assign cell as slipping if it was either 1 or 2 in the previous time step.
-                        if( (const*p000 + a(i,j)*dt).ge.0. ) then ! if this criterion holds (ask Hideo. Cell reached residual strength?),
+                        if( Dc(i,j).eq.0.0d0.or.(const*p000 + a(i,j)*dt).ge.0. ) then ! if this criterion holds (ask Hideo. Cell reached residual strength?),
                            ! for Dc =  0, a(,j) = inf, so this always holds!
                            vel(i,j,k) = (tr(i,j) - dtau)/(const*p000) ! assign slip velocity according to velo = (residual stress - driving stress)/unit factor (?)
                         else ! if the criterion does not hold, assign velo according to slightly altered law
@@ -368,20 +371,22 @@ PROGRAM main
                   endif
                   ! now, update stress, slip, etc
                   stress(i,j) = dtau + const*p000*vel(i,j,k) ! instantaneous stress? Ask Hideo. This line puzzles me; why multiply again with scaled velo?
-                  !if ((stress(32,32).lt.0.0d0).and.i.eq.32.and.j.eq.32) then
-                  !    write(*,*) "neg. stress at origin", k, tau0(i,j), const*ans, dtau, const*p000*vel(i,j,k), stress(32,32)
+                  !if ((stress(32,32).eq.0.0d0).and.i.eq.32.and.j.eq.32) then
+                  !    write(*,*) "neg. stress at origin", k, dtau, vel(i,j,k), const*p000*vel(i,j,k), stress(32,32)
                   !end if
                   ! if (dtau.lt.0.0d0) write(*,*) "negative dtau ", i, j, k, dtau
                   tau(i,j) = dtau ! store driving stress for later use
                   w(i,j) = w(i,j) + vel(i,j,k)*dt ! Euler time integration of slip to obtain w at cell
-                  if (vel(i,j,k)*dt.lt.0.0d0) then
-                     write(*,*) "negative slip ", i, j, k, vel(i,j,k), dt, w(i,j)
-                  end if
+                  !if (vel(i,j,k)*dt.lt.0.0d0) then
+                  !   write(*,*) "negative slip ", i, j, k, vel(i,j,k), dt, w(i,j)
+                  !end if
                   if( iter.ne.npower ) vel2(i,j,k) = vel(i,j,k) ! if the final scale stage has not been reached, store velocity field in vel2
-                  if( w(i,j).gt.dc(i,j) ) then ! if accumulated slip exceeds fracture energy...
+                  if( w(i,j).ge.dc(i,j) ) then ! if accumulated slip exceeds fracture energy... (changed from gt to ge on 23rd Nov 2026)
                      sigma(i,j) = tr(i,j) ! ..., sigma becomes residual stress
+                     !write(*,*) "So umm this happened"
                   else
                      sigma(i,j) = tp(i,j) - a(i,j)*w(i,j) ! if not, it is updated according to the linear slip weakening with slide from tp to tr with slope a.
+                     !write(*,*) "So yeah that just happenend", w(i,j), dc(i,j)
                   endif
                   if( irup(i,j).lt.0.and.vel(i,j,k).ne.0.) irup(i,j) = k ! track which cells have been reached by rupture and assign rupture time(index)
 
@@ -398,6 +403,7 @@ PROGRAM main
             allSlips(:,:,k) = w
             allOffplaneStresses(:,:,k) = dtau_offset
             allOnplaneStresses(:,:,k)  = stress
+            !write(*,*) "Stress at selected element: ", k, stress(50, 32), dtau, dsigma
             !write(*,*) "Data saved for time step ", k
 
 !      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
