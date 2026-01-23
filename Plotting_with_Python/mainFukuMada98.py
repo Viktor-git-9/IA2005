@@ -11,7 +11,7 @@ from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/offPlaneStress/heterogeneous/").resolve() # defines root directory for project
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/offPlaneStress/homogeneous/nmax64").resolve() # defines root directory for project
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/MadariagaFukuyama98/long/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/MadariagaFukuyama98/circular/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -29,7 +29,7 @@ runs = {k: runs[k] for k in newOrder4runs}
 
 scaleIndex = 0 # scale index for plots
 xPos, yPos = 32, 32
-tmin, tmax = 0, 100
+tmin, tmax = 0, 116
 
 SlipVelosPoint = []
 OnplaneStressPoint = []
@@ -51,20 +51,20 @@ for iRun in runs.values():
 
 
 ### data at selected point over time
-axesLabels1 = ["x [element count]", "slip velocity [???]"]
-axesLabels2 = ["x [element count]", "slip [???]"]
-axesLabels3 = ["x [element count]", "stress [???]"]
+axesLabels1 = ["t [time step]", "slip velocity [???]"]
+axesLabels2 = ["t [time step]", "slip [???]"]
+axesLabels3 = ["t [time step]", "stress [???]"]
 lineLabels = ["0", "0.5", "1", "2"]
 
-plotProfiles(SlipVelosPoint, axesLabels1, lineLabels, "Slipvelo at origin")
-plotProfiles(slipHistoriesPoint, axesLabels2, lineLabels, "Slip at origin")
-plotProfiles(OnplaneStressPoint, axesLabels3, lineLabels, "Stress at origin")
+plotProfiles(SlipVelosPoint, axesLabels1, lineLabels, "Slipvelo at origin", stretchFactor=2/np.sqrt(3))
+plotProfiles(slipHistoriesPoint, axesLabels2, lineLabels, "Slip at origin", stretchFactor=2/np.sqrt(3))
+plotProfiles(OnplaneStressPoint, axesLabels3, lineLabels, "Stress at origin", stretchFactor=2/np.sqrt(3))
 
 ### contour plots of specified run at specified time
-runName = "Dc_0" # name of selected run
+runName = "Dc_1" # name of selected run
 run = runs[runName]
 
-plotTimeSteps = [0, 20, 30, 40, 50, 60, 70, 80]
+plotTimeSteps = [0, 1, 2, 3, 10, 20, 30, 40, 50, 60]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
@@ -82,15 +82,15 @@ for iTime in plotTimeSteps:
 plotContours(temp_rupTimes, timeStepLabels, cbarLabels2, globalTitle="Rupture Times")
 # plotContours(temp_slipHis, timeStepLabels, cbarLabels2, globalTitle="Acc. Slip")
 plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, globalTitle="Curr. Slip") 
-# plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress")
+plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress")
 
 ### plot Dc heterogeneity ###
 heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
 plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
 
 ### mesh plot of data over spatial profile in time
-plotMeshSlices(allSlipVelos, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Slip velocity")
-plotMeshSlices(allOnplaneStress, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Stress")
+plotMeshSlices(allSlipVelos, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Slip velocity", stretchFactor=2/np.sqrt(3))
+plotMeshSlices(allOnplaneStress, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Stress", stretchFactor=2/np.sqrt(3))
 
 
 

@@ -18,12 +18,13 @@ def plotMeshSlices(
     slice_index=0,        # index of the fixed spatial dimension
     spatial_coords=None, # x or y coordinates
     t_coords=None,       # time coordinates
+    stretchFactor=None,
     titles=None,
     xlabel="Time",
     ylabel=None,
     suptitle=None,
     elev=35,
-    azim=60
+    azim=-30
 ):
     """
     Plot stacked 3D mesh plots (Matlab-like) from 3D arrays.
@@ -51,7 +52,12 @@ def plotMeshSlices(
         else:
             raise ValueError("slice_dim must be 'x' or 'y'")
 
-        time = t_coords if t_coords is not None else np.arange(slice_data.shape[1])
+        #time = t_coords if t_coords is not None else np.arange(slice_data.shape[1])
+        
+        if t_coords is not None and stretchFactor is None:
+            time = t_coords
+        elif t_coords is None and stretchFactor is not None:
+            time = np.linspace(1, stretchFactor*slice_data.shape[1], slice_data.shape[1])
 
         T, S = np.meshgrid(time, spatial)
 
