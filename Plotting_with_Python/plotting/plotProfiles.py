@@ -119,7 +119,7 @@ def plotProfiles(data, axesLabels, lineLabels, globalTitle='none', stretchFactor
     for profile, linelabel in zip(data, lineLabels):              
         ax.plot(xvals, profile, label=linelabel, linewidth=3)
     plt.grid()
-    plt.legend()
+    plt.legend(fontsize="large")
     plt.show
     
     ax.set_xlabel(axesLabels[0])

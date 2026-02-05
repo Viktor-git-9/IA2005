@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-def plotContours(data, titles=None, cbarLabels=None, cmap='inferno', globalTitle='none'):
+def plotContours(data, titles=None, cbarLabels=None, clims = None, cmap='inferno', globalTitle='none'):
     """
     Plot a list of 2D arrays in a 2 x (N/2) grid.
     If N is odd, add one extra plot to the right.
@@ -60,7 +60,10 @@ def plotContours(data, titles=None, cbarLabels=None, cmap='inferno', globalTitle
         
     # plot plot plot 
     for ax, arr, title, cbarLabel in zip(axes, data, titles, cbarLabels):
-        im = ax.imshow(arr.T, cmap=cmap, origin='lower')
+        if clims is not None:
+            im = ax.imshow(arr.T, cmap=cmap, vmin=clims[0], vmax=clims[1], origin='lower')
+        else:
+            im = ax.imshow(arr.T, cmap=cmap, origin='lower')
         ax.set_aspect('equal')      # <- enforces square axes
         ax.set_title(title)
         cbar = plt.colorbar(im, ax=ax)
