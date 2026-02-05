@@ -13,9 +13,9 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 64, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 512, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
-   PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax )
+   PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
       allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
@@ -26,15 +26,18 @@ PROGRAM main
       p000, p000_offset, ker31s, ker32s, dtau, dsigma, alpha, &
       ds, dt, rad, r0, rini, xhypo, yhypo, &
       xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
-      t, piece1, piece1_offset, ans, offset, ans_offset, r_asperity
+      t, piece1, piece1_offset, ans, offset, ans_offset, r_asperity, &
+      kernelMemoryEstimate
    REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
    REAL :: ran1
    INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
    INTEGER :: i, j, k, l, m, n, ndir, idata, ix, iy, &
       kmin, iter, kmax, itmx1, icheck, icheck2, it, &
       ndense, nasp, idum, iscale, ihypo, isim, isim0, nhypo, &
-      nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2
+      nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2, diffTime, &
+      kernelDiffTime
    INTEGER :: ndata(2)
+   INTEGER, DIMENSION(8) :: startTime, endTime, kernelStartTime, kernelEndTime
    complex(kind=kind(0d0)), allocatable :: &
       zdata(:), zresp(:), zresp_offset(:), zans(:), zans_offset(:)
    complex(kind=kind(0d0)), allocatable :: &
@@ -46,11 +49,10 @@ PROGRAM main
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
    CHARACTER*5  num, num2
-   CHARACTER(10) :: currentTime
 
 ! Say hello by printing system time
-   call date_and_time(TIME=currentTime)
-   print '(a)', currentTime
+   call date_and_time(VALUES=startTime)
+   write(*,*) 'Starting at', startTime(5), ':', startTime(6), ':', startTime(7)
 
 ! READ FROM PARAMETER FILE
    param_file = "IA05.prm"
@@ -90,7 +92,7 @@ PROGRAM main
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
-   dc0 = 2.0d0*ds ! fracture energy [m], default 0.250*ds
+   dc0 = 0.50d0*ds ! fracture energy [m], default 0.250*ds
    r0 = 5.6250d0*ds ! asperity radius [m], default 5.625*ds
    rini = 3.75d0*ds ! initialization radius [m], default 3.75*ds
    ndense = 4 ! density of asperity, default 4
@@ -108,9 +110,9 @@ PROGRAM main
       iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
    ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
    ALLOCATE( dcorg(ixmax, ixmax) )
-   ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), zresp_offset(ndata1*ndata2), &
-      zans(ndata1*ndata2), zans_offset(ndata1*ndata2))
-   ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx), zker_offset(ndata1*ndata2, itmx))
+   ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), &
+      zans(ndata1*ndata2)) !, zans_offset(ndata1*ndata2), zresp_offset(ndata1*ndata2))
+   ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx)) !, zker_offset(ndata1*ndata2, itmx))
 
 
 ! Creating asperity map with subroutine
@@ -119,13 +121,19 @@ PROGRAM main
    ns = ixmax/256
    if(ns.lt.1) ns = 1
 
-!name7 = dir(1:ndir)//'/hetero.org'
-!call write_real_2DArray(dble(dcorg), name7) ! write dc to a file using self-written subroutine
-
 ! Calculating Green's function Kernels on fault plane and offplane
+   kernelMemoryEstimate = size(zker)*16.0d0*10.0d0**(-9) ! rough estimate of memory used by kernel
+   write(*,*) "Calculating Green's function Kernels..."
+   write(*,'("Estimated kernel size: ", F8.3, " GB")') kernelMemoryEstimate ! rough estimate of memory used by kernel
    offset = 5.d0 ! z-coordinate of off-plane measurement plane
+   call date_and_time(VALUES=kernelStartTime)
    call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
-   call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
+   !call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
+   call date_and_time(VALUES=kernelEndTime)
+
+   kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Don't run this at midnight :)
+      (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
+   write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
 
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
@@ -152,14 +160,6 @@ PROGRAM main
    write(12, '(4f10.3)') dc0, dcmax, r0, rini
    write(12, '(4i10)') ndense, nscale2, npower2, nhypo
    close(12)
-
-   name95 = 'params4python.dat'
-   open(22, file=savePath1//name95)
-   write(22, '(1i5)')  nmax
-   write(22, '(1i5)')  nmax
-   write(22, '(1i5)')  itmx+1
-   write(22, '(f9.3)') offset
-   close(22)
 
 !!
 !! ITERATION OF HYPOCENTER LOCATION
@@ -308,17 +308,17 @@ PROGRAM main
 
                do idata=1, ndata1*ndata2
                   zans(idata) = (0.0d0, 0.0d0) ! set zans to 0
-                  zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offet
+                  !zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offet
                   do n=1, k-1 ! this is the actual convolution, carried out over all previous time steps -> over the full slip velo history
                      zans(idata) = zans(idata) +  &
                         zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
 
-                     zans_offset(idata) = zans_offset(idata) + &
-                        zker_offset(idata, k-n)*zvel(idata, n) ! do the same for offplane kernel
+                     !zans_offset(idata) = zans_offset(idata) + &
+                     !   zker_offset(idata, k-n)*zvel(idata, n) ! do the same for offplane kernel
                   enddo
                enddo
                call fourn(zans, ndata, 2, -1) ! FFT backtransform to obtain stress change caused by past slip action
-               call fourn(zans_offset, ndata, 2, -1) ! same thing for offplane stress
+               !call fourn(zans_offset, ndata, 2, -1) ! same thing for offplane stress
             endif
 
             do i=1, nmax
@@ -327,12 +327,12 @@ PROGRAM main
 
                   if( k.ne.1 ) then ! again for all time steps other than the first...
                      ans = facfft*dble(zans(idata)) ! get the result of the FFT backtransform by multiplying with a normalization factor.
-                     ans_offset = facfft*dble(zans_offset(idata)) ! and the same for offplane stress
+                     !ans_offset = facfft*dble(zans_offset(idata)) ! and the same for offplane stress
                      dtau = tau0(i,j) + const*ans ! now obtain driving shear stress on cell at (i,j) at time step k by adding the elastic stress perturbation to the background stress
-                     dtau_offset(i,j) = tau0(i,j) + const*ans_offset
+                     !dtau_offset(i,j) = tau0(i,j) + const*ans_offset
                   else ! remember: const = sqrt(3.0d0)/(4.0d0*pi)*mu is a factor to get the stress units right
                      dtau = tau0(i,j) ! in first time step, dtau is simply the background stress
-                     dtau_offset = tau0(i,j)
+                     !dtau_offset = tau0(i,j)
                   endif
                   dsigma = sigma(i,j) ! current shear strength at cell (i,j), to be compared with dtau
                   ! sigma is initialized as yield stress and then updated according to slip weakening law below
@@ -401,7 +401,7 @@ PROGRAM main
 
             allRuptureTimes(:,:,k) = irup ! store rupture times in book keeping array
             allSlips(:,:,k) = w
-            allOffplaneStresses(:,:,k) = dtau_offset
+            allOffplaneStresses(:,:,k) = 0 ! should be dtau_offset, set 0 for the moment as offplane stress calculation is disabled
             allOnplaneStresses(:,:,k)  = stress
             !write(*,*) "Stress at selected element: ", k, stress(50, 32), dtau, dsigma
             !write(*,*) "Data saved for time step ", k
@@ -438,11 +438,11 @@ PROGRAM main
                close(13)
 
                !!! Writing new book-keeping files for python here !!!
-               name99 = 'ruptureTimes'//num2(1:1)//'.bin'
-               name98 = 'slipHistories'//num2(1:1)//'.bin'
-               name97 = 'offPlaneStress'//num2(1:1)//'.bin'
-               name96 = 'heterogeneity'//num2(1:1)//'.bin'
-               name94 = 'onPlaneStress'//num2(1:1)//'.bin'
+               name99  = 'ruptureTimes'//num2(1:1)//'.bin'
+               name98  = 'slipHistories'//num2(1:1)//'.bin'
+               name97  = 'offPlaneStress'//num2(1:1)//'.bin'
+               name96  = 'heterogeneity'//num2(1:1)//'.bin'
+               name94  = 'onPlaneStress'//num2(1:1)//'.bin'
                name100 = 'slipVelocities'//num2(1:1)//'.bin'
                call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
                call write_real_3DArray_bin(allSlips, savePath1//name98)
@@ -497,6 +497,22 @@ PROGRAM main
 
 99 continue
    write(*,*) "END OF SIMULATION"
+
+   call date_and_time(VALUES=endTime)
+   write(*,*) 'Ending at', endTime(5), ':', endTime(6), ':', endTime(7)
+   diffTime = abs(endTime(5)*3600 + endTime(6)*60 + endTime(7) - & ! Don't run this at midnight :)
+      (startTime(5)*3600 + startTime(6)*60 + startTime(7)))
+   write(*,*) 'Total time:', diffTime, 'seconds.'
+
+   name95 = 'params4python.dat'
+   open(22, file=savePath1//name95)
+   write(22, '(1i5)')  nmax
+   write(22, '(1i5)')  nmax
+   write(22, '(1i5)')  itmx+1
+   write(22, '(f9.3)') offset
+   write(22, '(1i5)') diffTime
+   write(22, '(1i5)') kernelDiffTime
+   close(22)
 
 END
 
