@@ -195,6 +195,8 @@ PROGRAM main
       write(16, '(f10.3)') rini
       close(16)
 
+      write(*,*) "Hypocenter location: ", ihypo, x0(ihypo), y0(ihypo)
+
 !!
 !! ITERATION OF STAGE
 !!
