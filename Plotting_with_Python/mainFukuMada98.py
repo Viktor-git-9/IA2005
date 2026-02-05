@@ -28,8 +28,8 @@ newOrder4runs = ["Dc_0", "Dc_0point5", "Dc_1", "Dc_2"]
 runs = {k: runs[k] for k in newOrder4runs}
 
 scaleIndex = 0 # scale index for plots
-xPos, yPos = 32, 32
-tmin, tmax = 0, 116
+xPos, yPos = 31, 31
+tmin, tmax = 0, 100
 
 SlipVelosPoint = []
 OnplaneStressPoint = []
@@ -51,12 +51,12 @@ for iRun in runs.values():
 
 
 ### data at selected point over time
-axesLabels1 = ["t [time step]", "slip velocity [???]"]
+axesLabels1 = ["t [time step]", "slip velocity"]
 axesLabels2 = ["t [time step]", "slip [???]"]
 axesLabels3 = ["t [time step]", "stress [???]"]
-lineLabels = ["0", "0.5", "1", "2"]
+lineLabels = ["Dc = 0.5", "Dc = 1", "Dc = 2"]
 
-plotProfiles(SlipVelosPoint, axesLabels1, lineLabels, "Slipvelo at origin", stretchFactor=2/np.sqrt(3))
+plotProfiles(SlipVelosPoint[1:], axesLabels1, lineLabels, "Slip velocities at origin", stretchFactor=2/np.sqrt(3))
 plotProfiles(slipHistoriesPoint, axesLabels2, lineLabels, "Slip at origin", stretchFactor=2/np.sqrt(3))
 plotProfiles(OnplaneStressPoint, axesLabels3, lineLabels, "Stress at origin", stretchFactor=2/np.sqrt(3))
 
@@ -64,33 +64,39 @@ plotProfiles(OnplaneStressPoint, axesLabels3, lineLabels, "Stress at origin", st
 runName = "Dc_1" # name of selected run
 run = runs[runName]
 
-plotTimeSteps = [0, 1, 2, 3, 10, 20, 30, 40, 50, 60]
+plotTimeSteps = [1, 10, 20, 30, 40, 50]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
-cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
+cbarLabels1 = ["Rupture times [dt]"] * len(plotTimeSteps)
+cbarLabels2 = ["Accumulated slip [m]"] * len(plotTimeSteps)
+cbarLabels3 = ["Slip velocity [m]"] * len(plotTimeSteps)
+cbarLabels4 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
 temp_rupTimes = []
 temp_slipHis = []
 temp_slipVelo = []
 temp_onPlaneStress  = []
+temp_offPlaneStress = []
 
 for iTime in plotTimeSteps:
     temp_rupTimes.append(run.load("ruptureTimes", scaleIndex, iTime))
     temp_slipHis.append(run.load("slipHistories", scaleIndex, iTime))
     temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime))
     temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime))
+    temp_offPlaneStress.append(run.load("offPlaneStress", scaleIndex, iTime))
 
-plotContours(temp_rupTimes, timeStepLabels, cbarLabels2, globalTitle="Rupture Times")
-# plotContours(temp_slipHis, timeStepLabels, cbarLabels2, globalTitle="Acc. Slip")
-plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, globalTitle="Curr. Slip") 
-plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress")
+plotContours(temp_rupTimes, timeStepLabels, cbarLabels1, globalTitle="Rupture Times")
+plotContours(temp_slipHis, timeStepLabels, cbarLabels2, globalTitle="Total Slip")
+plotContours(temp_slipVelo, timeStepLabels, cbarLabels3, globalTitle="Slip velocity") 
+plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels4, globalTitle="Onplane Stress", clims=[0, 2])
+plotContours(temp_offPlaneStress, timeStepLabels, cbarLabels4, globalTitle="Offplane Stress at 5 el. offset", clims = [0, 1])
 
 ### plot Dc heterogeneity ###
-heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
-plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
+#heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
+#plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
 
 ### mesh plot of data over spatial profile in time
-plotMeshSlices(allSlipVelos, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Slip velocity", stretchFactor=2/np.sqrt(3))
-plotMeshSlices(allOnplaneStress, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Stress", stretchFactor=2/np.sqrt(3))
+#plotMeshSlices(allSlipVelos, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Slip velocity", stretchFactor=2/np.sqrt(3))
+#plotMeshSlices(allOnplaneStress, slice_dim = "x", slice_index = 0, titles=newOrder4runs, suptitle="Stress", stretchFactor=2/np.sqrt(3))
 
 
 
