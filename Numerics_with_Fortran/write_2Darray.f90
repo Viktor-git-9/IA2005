@@ -61,7 +61,8 @@ SUBROUTINE write_real_2DArray_bin(data, filename)
     DOUBLE PRECISION, intent(in) :: data(:,:)
     CHARACTER(len=*), intent(in) :: filename
 
-    write(*,*) "Writing to file..."
+    write(*,*) "Writing real 2D to file ", filename
+    write(*,*) "Dimensions of data array:", size(data,1), size(data,2), size(data)
     open(unit=19, file=filename, form="unformatted", access="stream")
     write(19) data
     close(19)
@@ -74,12 +75,12 @@ SUBROUTINE write_cmplx_2DArray_bin(data, filename)
     DOUBLE COMPLEX, intent(in) :: data(:,:)
     CHARACTER(len=*), intent(in) :: filename
 
-    write(*,*) "Writing to file..."
+    write(*,*) "Writing cx 2D to file ", filename
+    write(*,*) "Dimensions of data array:", size(data,1), size(data,2), size(data)
     open(unit=19, file=filename, form="unformatted", access="stream")
     write(19) data
     close(19)
     write(*,*) "File written!"
-    write(*,*) filename
 
 END SUBROUTINE
 
@@ -88,7 +89,8 @@ SUBROUTINE write_real_3DArray_bin(data, filename)
     DOUBLE PRECISION, intent(in) :: data(:,:,:)
     CHARACTER(len=*), intent(in) :: filename
 
-    write(*,*) "Writing to file..."
+    write(*,*) "Writing real 3D to file ", filename
+    write(*,*) "Dimensions of data array:", size(data,1), size(data,2), size(data,3), size(data)
     open(unit=19, file=filename, form="unformatted", access="stream")
     write(19) data
     close(19)
@@ -101,7 +103,8 @@ SUBROUTINE write_cmplx_3DArray_bin(data, filename)
     DOUBLE COMPLEX, intent(in) :: data(:,:,:)
     CHARACTER(len=*), intent(in) :: filename
 
-    write(*,*) "Writing to file..."
+    write(*,*) "Writing cx 3D to file ", filename
+    write(*,*) "Dimensions of data array:", size(data,1), size(data,2), size(data,3), size(data)
     open(unit=19, file=filename, form="unformatted", access="stream")
     write(19) data
     close(19)
