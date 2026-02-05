@@ -55,7 +55,7 @@ CONTAINS
         write(*,*) "Setting up long asperity friction law..."
 
         tauyBandThickness = 2 ! thickness of high-strength boundary bands
-        tau0BandThickness = 20 ! thickness of low-initial-stress boundary bands
+        tau0BandThickness = 16 ! thickness of low-initial-stress boundary bands
         do i = 1, nmax
             do j = 1, nmax
 
@@ -106,7 +106,7 @@ CONTAINS
         tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
         write (*,*) "Setting up circular asperity friction law..."
 
-        ! Careful: geometric logic is reversed compared to long asperity case!
+        ! Careful: band thickness is measured from center of the fault!
         tauyBandThickness = 30 ! thickness of high-strength boundary section
         tau0BandThickness = 16 ! thickness of low-initial-stress boundary section
         do i = 1, nmax
