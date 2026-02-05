@@ -8,14 +8,14 @@ from plotting.plotContour import plotContours, plotContour2x2, plotContour2x2plu
 from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2plus1, plotProfiles
 from plotting.plotMesh import plotMeshSlices
 
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/general_testing/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_event537/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
 for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directory
     if runDir.is_dir(): # checks if an object is a run folder
         paramFile = runDir / "params4python.dat" # prepare path to the parameter file
-        nx, ny, nt, offset, runTime = loadParameters(paramFile) # loads parameters for specific run
+        nx, ny, nt, offset, runTime, kernelTime = loadParameters(paramFile) # loads parameters for specific run
         nx = int(nx) # turn parameters into ints
         ny = int(ny)
         nt = int(nt)
@@ -26,10 +26,10 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "ndata=4nmax" # name of selected run
+runName = "renorm_off" # name of selected run
 run = runs[runName]
 
-plotTimeSteps = [0, 1, 2, 3, 10, 20, 30, 40, 50, 60]
+plotTimeSteps = [1, 10, 20, 30, 40, 50]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
@@ -48,3 +48,7 @@ plotContours(temp_rupTimes, timeStepLabels, cbarLabels2, globalTitle="Rupture Ti
 # plotContours(temp_slipHis, timeStepLabels, cbarLabels2, globalTitle="Acc. Slip")
 plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, globalTitle="Curr. Slip") 
 plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress")
+
+### plot Dc heterogeneity ###
+heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
+plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
