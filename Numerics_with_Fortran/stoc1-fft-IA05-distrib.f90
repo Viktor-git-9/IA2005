@@ -80,11 +80,11 @@ PROGRAM main
 !
 ! SCALE-INDEPENDENT PARAMETER
 !
-   mu =  1.0d0! medium rigidity [GPa] Default value 32.40d0
-   alpha = sqrt(3.0d0) ! P-wave velocity [km/s] Default value 6.0d0
+   mu =  32.40d0! medium rigidity [GPa] Default value 32.40d0
+   alpha = 6.0d0 ! P-wave velocity [km/s] Default value 6.0d0
    tp0 = 5.0d0 ! yield stress for slip weakening [MPa]
    tr0 = 0.0d0 ! residual stress [MPa]
-   t0  = 2.8d0  ! initial stress [MPa] Default value 2.8 MPa.
+   t0  = 3.0d0  ! initial stress [MPa] Default value 2.8 MPa.
    const = sqrt(3.0d0)/(4.0d0*pi)*mu ! some constant for conversion
 !
 ! SCALING PARAMETER
@@ -92,7 +92,7 @@ PROGRAM main
 ! dc0 should be normalized by 0.001 ds.
 !
 ! INITIAL SETTING
-   dc0 = 0.50d0*ds ! fracture energy [m], default 0.250*ds
+   dc0 = 0.250d0*ds ! fracture energy [m], default 0.250*ds
    r0 = 5.6250d0*ds ! asperity radius [m], default 5.625*ds
    rini = 3.75d0*ds ! initialization radius [m], default 3.75*ds
    ndense = 4 ! density of asperity, default 4
