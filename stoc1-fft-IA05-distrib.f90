@@ -28,14 +28,18 @@ INTEGER :: i, j, k, l, m, n, ndir, idata, ix, iy, &
 		kmin, iter, kmax, itmx1, icheck, icheck2, it, &
 		ndense, nasp, idum, iscale, ihypo, isim, isim0, nhypo, &
 		nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2
-INTEGER :: ndata(2)
-DOUBLE COMPLEX zdata(ndata1*ndata2), zresp(ndata1*ndata2)
-DOUBLE COMPLEX zvel(ndata1*ndata2, itmx)
-DOUBLE COMPLEX zker(ndata1*ndata2, itmx)
-DOUBLE COMPLEX zans(ndata1*ndata2)
-EXTERNAL ker31s, ran1
-CHARACTER*40 name2, name3, name4, name5, name6, name7, dir, param_file
-CHARACTER*5  num, num2
+   INTEGER :: ndata(2)
+   complex(kind=kind(0d0)), allocatable :: &
+      zdata(:), zresp(:), zresp_offset(:), zans(:), zans_offset(:)
+   complex(kind=kind(0d0)), allocatable :: &
+      zvel(:,:), zker(:,:), zker_offset(:,:)
+   EXTERNAL ker31s, ran1
+   CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
+   CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/kernels/' ! use this save path to store and load the Green's function kernel files once they are calculated
+   CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
+      name94, name95, name96, name97, name98, name99, dir, param_file, &
+      name93, name92, name91, name90, name100
+   CHARACTER*5  num, num2
 
 ! PARAMETER FILE
         param_file = "IA05.prm"
