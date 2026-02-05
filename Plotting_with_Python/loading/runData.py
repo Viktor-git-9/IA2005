@@ -13,7 +13,7 @@ from pathlib import Path
 from .loaders import loadBinArray
 
 class runData:
-    def __init__(self, name, runDir, variables, nx, ny, nt, offset):
+    def __init__(self, name, runDir, variables, nx, ny, nt, offset, runTime=None, kernelTime=None):
         """
         Parameters
         ----------
@@ -32,6 +32,10 @@ class runData:
             "ny": ny,
             "nt": nt}
         self.offset = offset
+        if runTime is not None:
+            self.runTime = runTime
+        if kernelTime is not None:
+            self.kernelTime = kernelTime
         
     def filePath(self, var, scale):
         return self.runDir / f"{var}{scale}.bin"

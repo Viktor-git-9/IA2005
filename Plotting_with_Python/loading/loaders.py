@@ -79,8 +79,8 @@ def loadParameters(filename):
     with open(filename, 'r') as f:
         params = [float(line.strip()) for line in f if line.strip()]
         
-        if len(params) != 4:
-            raise ValueError(f"Expected 4 parameters in file, but found {len(params)}.")
+        #if len(params) != 5:
+        #    raise ValueError(f"Expected 4 parameters in file, but found {len(params)}.")
         return tuple(params)
     
 def loadVarsAtTime(run, scale, timeIndex):
