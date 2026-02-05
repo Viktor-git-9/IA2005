@@ -13,9 +13,9 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 512, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
-   PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
+   PARAMETER ( ndata1 = 4*nmax, ndata2 = 4*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
       allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
@@ -181,12 +181,12 @@ PROGRAM main
       if(isim.eq.6) ihypo = 13375
 
       r_asperity = 100
-      call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
+      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
       !name7 = dir(1:ndir)//'/hetero.org'
-      !name7 = dir(1:ndir)//'/hetero.bin'
-      !call write_real_2DArray_bin(dble(dcorg), name7) ! write dc to a file using self-written subroutine
+      name7 = dir(1:ndir)//'/hetero.bin'
+      call write_real_2DArray_bin(dble(dcorg), name7) ! write dc to a file using self-written subroutine
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
