@@ -146,6 +146,7 @@ PROGRAM main
 
       enddo
    enddo
+   
    name7 = dir(1:ndir)//'/hetero.org'
    ns = ixmax/256
    if(ns.lt.1) ns = 1
