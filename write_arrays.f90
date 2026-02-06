@@ -56,6 +56,20 @@ SUBROUTINE write_cmplx_2DArray(data, filename)
 
 END SUBROUTINE
 
+SUBROUTINE write_real_1DArray_bin(data, filename)
+    IMPLICIT NONE
+    DOUBLE PRECISION, intent(in) :: data(:)
+    CHARACTER(len=*), intent(in) :: filename
+
+    write(*,*) "Writing real 1D to file ", filename
+    write(*,*) "Dimensions of data array:", size(data,1), size(data)
+    open(unit=19, file=filename, form="unformatted", access="stream")
+    write(19) data
+    close(19)
+    write(*,*) "File written!"
+
+END SUBROUTINE
+
 SUBROUTINE write_real_2DArray_bin(data, filename)
     IMPLICIT NONE
     DOUBLE PRECISION, intent(in) :: data(:,:)

@@ -160,6 +160,10 @@ PROGRAM main
 
    name8 = 'full_hetero.bin' ! write full heterogeneity array to binary file
    call write_real_2DArray_bin(dble(dcorg), savePath1//name8)
+   name9 = 'full_x0.bin'
+   call write_real_1DArray_bin(x0, savePath1//name9)
+   name95 = 'full_y0.bin'
+   call write_real_1DArray_bin(y0, savePath1//name95)
 
 !
 ! RESPONSE FUNCTION (for in-plane shear stress calculation)
@@ -220,6 +224,8 @@ PROGRAM main
       write(16, '(i10, 2f10.3)') ihypo, x0(ihypo), y0(ihypo)
       write(16, '(f10.3)') rini
       close(16)
+
+      write(*,*) "Hypocenter location: ", ihypo, x0(ihypo), y0(ihypo)
 
 !!
 !! ITERATION OF STAGE
