@@ -44,7 +44,7 @@ PROGRAM main
       zvel(:,:), zker(:,:), zker_offset(:,:)
    EXTERNAL ker31s, ker32s, ran1
    CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
-   CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/kernels/' ! use this save path to store and load the Green's function kernel files once they are calculated
+   CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
    CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
@@ -180,13 +180,18 @@ PROGRAM main
       if(isim.eq.5) ihypo = 12746
       if(isim.eq.6) ihypo = 13375
 
-      r_asperity = 100
+      !r_asperity = 100
       !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
-      !name7 = dir(1:ndir)//'/hetero.org'
+      !instead of generating the asperity map, load it from file
+      open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
+      read(19) dcorg
+      close(19)
+      write(*,*) "Maximum value in dcorg:", maxval(dcorg)
+
       name7 = dir(1:ndir)//'/hetero.bin'
-      call write_real_2DArray_bin(dble(dcorg), name7) ! write dc to a file using self-written subroutine
+      call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
