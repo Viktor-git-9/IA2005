@@ -19,7 +19,7 @@ PROGRAM main
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
       allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
-      stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline
+      stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, dc_full
    REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
    REAL(8) :: pi, mu, const, facbiem, facfft, &
       tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
@@ -113,6 +113,7 @@ PROGRAM main
    ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), &
       zans(ndata1*ndata2)) !, zans_offset(ndata1*ndata2), zresp_offset(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx)) !, zker_offset(ndata1*ndata2, itmx))
+   ALLOCATE(dc_full(4096,4096)) ! this is the array to load the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
 
 
 ! Creating asperity map with subroutine
@@ -182,13 +183,13 @@ PROGRAM main
 
       !r_asperity = 100
       !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
       !instead of generating the asperity map, load it from file
       open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
-      read(19) dcorg
+      read(19) dc_full
       close(19)
-      write(*,*) "Maximum value in dcorg:", maxval(dcorg)
+      write(*,*) "Loaded asperity map from file."
 
       name7 = dir(1:ndir)//'/hetero.bin'
       call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
