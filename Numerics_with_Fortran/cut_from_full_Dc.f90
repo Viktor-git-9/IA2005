@@ -9,20 +9,25 @@ MODULE DcCutter
 SUBROUTINE cut_from_full_Dc(dc_full, dcorg, hypocenter_x, hypocenter_y, dim_x, dim_y)
     IMPLICIT NONE
     REAL(8), DIMENSION(:, :), INTENT(IN) :: dc_full
-    REAL(8), DIMENSION(:, :), ALLOCATABLE, INTENT(OUT) :: dcorg
+    REAL, DIMENSION(:, :), ALLOCATABLE, INTENT(OUT) :: dcorg
     REAL(8), INTENT(IN) :: hypocenter_x, hypocenter_y
     INTEGER, INTENT(IN) :: dim_x, dim_y
 
     INTEGER :: i_start, i_end, j_start, j_end
 
+    write(*,*) "Made it here: 1."
+    write(*,*) dim_x
     ! Calculate the starting and ending indices for cutting the subarray
     i_start = MAX(1, NINT(hypocenter_x - dim_x / 2))
+    write(*,*) "Made it here: 1.5."
     i_end = MIN(SIZE(dc_full, 1), NINT(hypocenter_x + dim_x / 2))
     j_start = MAX(1, NINT(hypocenter_y - dim_y / 2))
     j_end = MIN(SIZE(dc_full, 2), NINT(hypocenter_y + dim_y / 2))
+    write(*,*) "Made it here: 2."
 
     ! Allocate the output array based on the calculated dimensions
     ALLOCATE(dcorg(i_end - i_start + 1, j_end - j_start + 1))
+    write(*,*) "Made it here: 3."
 
     ! Cut the appropriate part from the full heterogeneity map
     dcorg = dc_full(i_start:i_end, j_start:j_end)

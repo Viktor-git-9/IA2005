@@ -9,6 +9,7 @@ PROGRAM main
    use writeArrays
    use makeDCmap
    use iniParams
+   use DcCutter
    IMPLICIT NONE
 !
    INTEGER nmax, ndata1, ndata2
@@ -183,13 +184,28 @@ PROGRAM main
 
       !r_asperity = 100
       !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
       !instead of generating the asperity map, load it from file
       open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
       read(19) dc_full
       close(19)
       write(*,*) "Loaded asperity map from file."
+
+      open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
+      read(19) x0
+      close(19)
+      write(*,*) "Loaded x0 from file."
+      write(*,*) "rank of x0:", rank(x0)
+      write(*,*) "x0(ihypo):", x0(ihypo)
+
+      open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
+      read(19) y0
+      close(19)
+      write(*,*) "Loaded y0 from file."
+
+      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax) ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
+      write(*,*) "Cut out the part of the heterogeneity map needed for the simulation."
 
       name7 = dir(1:ndir)//'/hetero.bin'
       call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
