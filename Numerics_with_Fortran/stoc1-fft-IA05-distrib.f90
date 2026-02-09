@@ -251,7 +251,8 @@ PROGRAM main
             enddo
          enddo
 
-         write(*,*) "Made it here 4"
+         write(*,*) "Made it here 4" ! Doesn't reach here, because now trying to use dcorg for renormalization, which is now just section of full heterogeneity map
+         ! is it maybe enough to fill dcorg with the full het. map, and initialize x0 and y0 properly?
 ! INITIALIZATION OF PARAMETERS
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
          smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
