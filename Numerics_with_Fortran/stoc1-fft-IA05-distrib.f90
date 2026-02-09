@@ -114,7 +114,8 @@ PROGRAM main
    ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), &
       zans(ndata1*ndata2)) !, zans_offset(ndata1*ndata2), zresp_offset(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx)) !, zker_offset(ndata1*ndata2, itmx))
-   ALLOCATE(dc_full(4096,4096)) ! this is the array to load the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
+   ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
+   ALLOCATE(x0(16348), y0(16348)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
 
 ! Creating asperity map with subroutine
@@ -196,8 +197,6 @@ PROGRAM main
       read(19) x0
       close(19)
       write(*,*) "Loaded x0 from file."
-      write(*,*) "rank of x0:", rank(x0)
-      write(*,*) "x0(ihypo):", x0(ihypo)
 
       open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
       read(19) y0
@@ -209,6 +208,7 @@ PROGRAM main
 
       name7 = dir(1:ndir)//'/hetero.bin'
       call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
+      write(*,*) "Dimensions of section cut from full heterogeneity map:", shape(dcorg)
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -251,6 +251,7 @@ PROGRAM main
             enddo
          enddo
 
+         write(*,*) "Made it here 4"
 ! INITIALIZATION OF PARAMETERS
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
          smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
