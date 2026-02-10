@@ -8,7 +8,7 @@ from plotting.plotContour import plotContours, plotContour2x2, plotContour2x2plu
 from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2plus1, plotProfiles
 from plotting.plotMesh import plotMeshSlices
 
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_event537/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -25,11 +25,11 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 #runs = {k: runs[k] for k in newOrder4runs}
 
 ### contour plots of specified run at specified time
-scaleIndex = 0
-runName = "event806" # name of selected run
+scaleIndex = 1
+runName = "renorm_on" # name of selected run
 run = runs[runName]
 
-plotTimeSteps = [1, 10, 20, 30, 100, 200]
+plotTimeSteps = [1, 10, 50, 100, 200, 400]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"

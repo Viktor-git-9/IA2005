@@ -10,6 +10,7 @@ PROGRAM main
    use makeDCmap
    use iniParams
    use DcCutter
+   use renormalizeDcmap
    IMPLICIT NONE
 !
    INTEGER nmax, ndata1, ndata2
@@ -117,7 +118,6 @@ PROGRAM main
    ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
    ALLOCATE(x0(16348), y0(16348)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
-
 ! Creating asperity map with subroutine
 !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
@@ -204,11 +204,9 @@ PROGRAM main
       write(*,*) "Loaded y0 from file."
 
       call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax) ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
-      write(*,*) "Cut out the part of the heterogeneity map needed for the simulation."
 
       name7 = dir(1:ndir)//'/hetero.bin'
       call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
-      write(*,*) "Dimensions of section cut from full heterogeneity map:", shape(dcorg)
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -217,41 +215,19 @@ PROGRAM main
       write(16, '(f10.3)') rini
       close(16)
 
-      write(*,*) "Hypocenter location: ", ihypo, x0(ihypo), y0(ihypo)
-
 !!
 !! ITERATION OF STAGE
 !!
       STAGE: do iter = 0, npower ! loop over different scales
          kmax = itmx
          ns = nscale**iter ! scale factor determines how many original grid cells are aggregated into one cell. nscale = 4 by default
-         allRuptureTimes = 0.0d0
+         allRuptureTimes = 0.0d0 ! fill rupture time array with 0s
+         nmax2 = nmax*nscale**iter ! For renormalization. nmax: number of grid cells in coarse grid, nmax2: "physical" size of region that coarse grid spans, in elementary grid cells
 
 ! RENORMALIZATION
-         nmax2 = nmax*nscale**iter ! nmax: number of grid cells in coarse grid, nmax2: "physical" size of region that coarse grid spans, in elementary grid cells
-         ! remember: nmax2 = nmax * ns
-         do i = 1, nmax ! loop over all grid cells in coarse grid, in x direction
-            i0 = ixmax/2 - nmax2/2 + ns*(i-1) + 1 ! find x-index of upper left corner of the coarse cell with index (i,j), in terms of elementary grid cells
-            do j = 1, nmax
-               j0 = ixmax/2 - nmax2/2 + ns*(j-1) + 1 ! find y-index of upper left corner of the coarse cell with index (i,j), in terms of elementary grid cells
-               dc(i,j) = 0.0d0 ! initialize coarse grid value for fracture energy
-               do i1 = 1, ns
-                  do j1 = 1, ns
-                     ix = i0 + i1 - 1 + int(x0(ihypo) - (ixmax+1)/2.) ! shift center of coarse graining step to hypocenter location, get proper x-index in terms of elementary cells
-                     if(ix.lt.1) ix = ixmax + ix ! periodic boundary conditions?
-                     if(ix.gt.ixmax) ix =  ix - ixmax
-                     iy = j0 + j1 - 1 + int(y0(ihypo) - (ixmax+1)/2.) ! shift center of coarse graining step to hypocenter location, get proper x-index in terms of elementary cells
-                     if(iy.lt.1) iy = ixmax + iy ! periodic boundary conditions?
-                     if(iy.gt.ixmax) iy =  iy - ixmax
+         !call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
+         dc = dcorg ! skip renormalization, simply use section cut from full map.
 
-                     dc(i,j) = dc(i,j) + dble(dcorg(ix, iy)) ! now, sum up contributions from all elementary cells in coarse grid cell and...
-                  enddo
-               enddo
-               dc(i,j) = dc(i,j)/(ns**2) ! average them using the count of elementary cells in said grid cell!
-            enddo
-         enddo
-
-         write(*,*) "Made it here 4" ! Doesn't reach here, because now trying to use dcorg for renormalization, which is now just section of full heterogeneity map
          ! is it maybe enough to fill dcorg with the full het. map, and initialize x0 and y0 properly?
 ! INITIALIZATION OF PARAMETERS
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
@@ -262,37 +238,12 @@ PROGRAM main
 
          !name7 = dir(1:ndir)//'/dc.dat'
          !call write_real_2DArray(dc, name7)
-         ! do i = 1, nmax ! loop over all x-positions
-         !   do j = 1, nmax ! loop over all y-positions
-         !     w(i,j) = 0.0d0 ! time integrated slip, set to 0
-         !     tau0(i,j) = t0 ! background stress<tau0
-         !     tp(i,j) = tp0 ! peak strength parameter for cell, set to uniform tp0
-         !     tr(i,j) = tr0 ! residual strength after failure, uniform tr0
-         !     dc(i,j) = dc(i,j)/ns ! renormalized fracture energy (normalized per-scale). Ask Hideo for unit explanation!
-         !     sigma(i,j) = tp(i,j) ! current shear strength?
-         !     a(i,j) = (tp(i,j) - tr(i,j))/dc(i, j) ! slope of linear slip-weakening law
-         !     iv(i,j) = 0 ! integer state variable for cell status during slip: 0 = not slipping, 1 = slipping, 2 = failed
-         !     irup(i,j) = -1 ! time index for first rupture occurance at given cell, to determine slip time. -1 = not slipped yet
-         !
-         !     if (iter.eq.0) then ! first rupture initiation if program is at first scale stage!
-         !       rad = sqrt((i-xhypo)**2 + (j-yhypo)**2)*ds ! get distance to hypocenter for current cell
-         !       if ( rad.le.rini ) then ! if distance is smaller than initialization radius:
-         !         tp(i,j) = 0.0d0 ! set cell strength to zero
-         !         dc(i,j) = 0.0d0 ! set rupture energy to zero
-         !         a(i,j) = 0.0d0 ! set slope of slip weakening to zero
-         !         sigma(i,j) = tp(i,j) ! set shear strength to zero
-         !         iv(i,j) = 2 ! set state variable to "failed!" -> rupture now has initialized at this cell!
-         ! endif
-         ! endif
-         !   enddo
-         ! enddo
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
             if( iter.eq.npower) kmax = itmx
             kmin = itmx1/nscale ! this has to do with continuing the calculation at a certain time step after changing scales, I think
 
-!    do k = 1, itmx
             do k = 1, nscale*(itmx1/nscale) ! maybe transfer results from previous finer scale to coarser scale? ask Hideo
                n = (k-1)/nscale + 1
                do i = 1, nmax
