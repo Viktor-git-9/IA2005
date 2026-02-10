@@ -55,6 +55,7 @@ PROGRAM main
 ! Say hello by printing system time
    call date_and_time(VALUES=startTime)
    write(*,*) 'Starting at', startTime(5), ':', startTime(6), ':', startTime(7)
+   write(*,*) "This is the newest version."
 
 ! READ FROM PARAMETER FILE
    param_file = "IA05.prm"
@@ -184,26 +185,26 @@ PROGRAM main
       if(isim.eq.6) ihypo = 13375
 
       !r_asperity = 100
-      !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
+      call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
       !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
       !instead of generating the asperity map, load it from file
-      open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
-      read(19) dc_full
-      close(19)
-      write(*,*) "Loaded asperity map from file."
+      ! open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
+      ! read(19) dc_full
+      ! close(19)
+      ! write(*,*) "Loaded asperity map from file."
 
-      open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
-      read(19) x0
-      close(19)
-      write(*,*) "Loaded x0 from file."
+      ! open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
+      ! read(19) x0
+      ! close(19)
+      ! write(*,*) "Loaded x0 from file."
 
-      open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
-      read(19) y0
-      close(19)
-      write(*,*) "Loaded y0 from file."
+      ! open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
+      ! read(19) y0
+      ! close(19)
+      ! write(*,*) "Loaded y0 from file."
 
-      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax) ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
+      ! call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax) ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
 
       name7 = dir(1:ndir)//'/hetero.bin'
       call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
@@ -227,6 +228,7 @@ PROGRAM main
 ! RENORMALIZATION
          !call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
          dc = dcorg ! skip renormalization, simply use section cut from full map.
+         write(*,*) maxval(dc), maxval(dcorg)
 
          ! is it maybe enough to fill dcorg with the full het. map, and initialize x0 and y0 properly?
 ! INITIALIZATION OF PARAMETERS
