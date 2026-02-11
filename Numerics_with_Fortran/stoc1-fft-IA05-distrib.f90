@@ -122,7 +122,7 @@ PROGRAM main
 ! Creating asperity map with subroutine
 !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
-   ns = ixmax/256
+   ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
    if(ns.lt.1) ns = 1
 
 ! Calculating Green's function Kernels on fault plane and offplane
@@ -204,7 +204,8 @@ PROGRAM main
       ! close(19)
       ! write(*,*) "Loaded y0 from file."
 
-      ! call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax) ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
+      ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
+      ! call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
 
       name7 = dir(1:ndir)//'/hetero.bin'
       call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
@@ -332,7 +333,7 @@ PROGRAM main
                         endif
                      else
                         iv(i,j) = 1 ! assign cell as slipping if it was either 1 or 2 in the previous time step.
-                        if( Dc(i,j).eq.0.0d0.or.(const*p000 + a(i,j)*dt).ge.0. ) then ! if this criterion holds (ask Hideo. Cell reached residual strength?),
+                        if( dc(i,j).eq.0.0d0.or.(const*p000 + a(i,j)*dt).ge.0. ) then ! if this criterion holds (ask Hideo. Cell reached residual strength?),
                            ! for Dc =  0, a(,j) = inf, so this always holds!
                            vel(i,j,k) = (tr(i,j) - dtau)/(const*p000) ! assign slip velocity according to velo = (residual stress - driving stress)/unit factor (?)
                         else ! if the criterion does not hold, assign velo according to slightly altered law

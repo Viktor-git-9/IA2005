@@ -25,11 +25,11 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 #runs = {k: runs[k] for k in newOrder4runs}
 
 ### contour plots of specified run at specified time
-scaleIndex = 0
-runName = "renorm_off" # name of selected run
+scaleIndex = 1
+runName = "renorm_on" # name of selected run
 run = runs[runName]
 
-plotTimeSteps = [1, 10, 50, 100, 200, 400]
+plotTimeSteps = [75, 76, 77, 78]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
