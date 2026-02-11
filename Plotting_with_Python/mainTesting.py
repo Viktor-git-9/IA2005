@@ -26,7 +26,7 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 1
-runName = "renorm_on" # name of selected run
+runName = "renorm_on_original" # name of selected run
 run = runs[runName]
 
 plotTimeSteps = [75, 76, 77, 150]
