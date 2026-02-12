@@ -7,7 +7,7 @@ SUBROUTINE make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0,
   IMPLICIT NONE
   INTEGER :: nscale, npower, idum, iscale, ihypo, i, j, i1, j1, &
   nhypo, ndense, nscale2, npower2, nasp, ixmax
-  REAL, intent(inout) :: dcorg(:,:)
+  REAL(8), intent(inout) :: dcorg(:,:)
   REAL(8), intent(out), allocatable :: x0(:), y0(:)
   REAL(8) :: dcmax, dc0, r0, r0dum, dcdum, xo, yo, rad
 
@@ -65,7 +65,7 @@ SUBROUTINE make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, 
   IMPLICIT NONE
   INTEGER :: i, j, ixmax, ihypo
   REAL(8) :: dcmax, dc0, r_asperity, rad
-  REAL, intent(inout) :: dcorg(:,:)
+  REAL(8), intent(inout) :: dcorg(:,:)
   REAL(8), intent(out), allocatable :: x0(:), y0(:)
 
   ALLOCATE( x0(ixmax-2), y0(ixmax-2) )

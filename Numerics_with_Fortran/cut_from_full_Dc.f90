@@ -9,7 +9,7 @@ MODULE DcCutter
 SUBROUTINE cut_from_full_Dc(dc_full, dcorg, hypocenter_x, hypocenter_y, dim_x, dim_y)
     IMPLICIT NONE
     REAL(8), DIMENSION(:, :), INTENT(IN) :: dc_full
-    REAL, DIMENSION(:, :), ALLOCATABLE, INTENT(OUT) :: dcorg
+    REAL(8), DIMENSION(:, :), ALLOCATABLE, INTENT(OUT) :: dcorg
     REAL(8), INTENT(IN) :: hypocenter_x, hypocenter_y
     INTEGER, INTENT(IN) :: dim_x, dim_y
 

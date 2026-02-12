@@ -13,10 +13,11 @@ CONTAINS
         IMPLICIT NONE
         INTEGER :: i, j, nmax, iter, ns
         INTEGER :: iv(nmax, nmax), irup(nmax, nmax)
-        DOUBLE PRECISION :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
-        DOUBLE PRECISION :: w(nmax, nmax), tau0(nmax, nmax), tp(nmax, nmax), &
-        tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
-
+        REAL(8) :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
+        REAL(8), DIMENSION(:,:) :: w(:,:), tau0(:,:), tp(:,:), &
+        tr(:,:), sigma(:,:), a(:,:), dc(:,:)
+        write(*,*) "Setting up homogeneous friction law..."
+ 
         do i = 1, nmax ! loop over all x-positions
             do j = 1, nmax ! loop over all y-positions
                 w(i,j) = 0.0d0 ! time integrated slip, set to 0
@@ -49,9 +50,9 @@ CONTAINS
         IMPLICIT NONE
         INTEGER :: i, j, nmax, iter, ns, tauyBandThickness, tau0BandThickness
         INTEGER :: iv(nmax, nmax), irup(nmax, nmax)
-        DOUBLE PRECISION :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
-        DOUBLE PRECISION :: w(nmax, nmax), tau0(nmax, nmax), tp(nmax, nmax), &
-        tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
+        REAL(8) :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
+        REAL(8), DIMENSION(:,:) :: w(:,:), tau0(:,:), tp(:,:), &
+        tr(:,:), sigma(:,:), a(:,:), dc(:,:)
         write(*,*) "Setting up long asperity friction law..."
 
         tauyBandThickness = 2 ! thickness of high-strength boundary bands
@@ -101,9 +102,9 @@ CONTAINS
         IMPLICIT NONE
         INTEGER :: i, j, nmax, iter, ns, tauyBandThickness, tau0BandThickness
         INTEGER :: iv(nmax, nmax), irup(nmax, nmax)
-        DOUBLE PRECISION :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
-        DOUBLE PRECISION :: w(nmax, nmax), tau0(nmax, nmax), tp(nmax, nmax), &
-        tr(nmax, nmax), dc(nmax, nmax), sigma(nmax, nmax), a(nmax, nmax)
+        REAL(8) :: t0, tp0, tr0, ds, rad, xhypo, yhypo, rini
+        REAL(8), DIMENSION(:,:) :: w(:,:), tau0(:,:), tp(:,:), &
+        tr(:,:), sigma(:,:), a(:,:), dc(:,:)
         write (*,*) "Setting up circular asperity friction law..."
 
         ! Careful: band thickness is measured from center of the fault!

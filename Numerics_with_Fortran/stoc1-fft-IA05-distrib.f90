@@ -20,8 +20,9 @@ PROGRAM main
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
       allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
-   REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, &
-      stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, dc_full
+   REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, & ! moved dcorg here!
+      stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, &
+      dc_full, dcorg
    REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
    REAL(8) :: pi, mu, const, facbiem, facfft, &
       tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
@@ -30,7 +31,6 @@ PROGRAM main
       xo, yo, r0dum, dcdum, dcmax, dim, smo, mw, &
       t, piece1, piece1_offset, ans, offset, ans_offset, r_asperity, &
       kernelMemoryEstimate
-   REAL, DIMENSION(:, :), ALLOCATABLE :: dcorg
    REAL :: ran1
    INTEGER, DIMENSION(:, :), ALLOCATABLE :: iv, irup
    INTEGER :: i, j, k, l, m, n, ndir, idata, ix, iy, &
@@ -55,7 +55,6 @@ PROGRAM main
 ! Say hello by printing system time
    call date_and_time(VALUES=startTime)
    write(*,*) 'Starting at', startTime(5), ':', startTime(6), ':', startTime(7)
-   write(*,*) "This is the newest version."
 
 ! READ FROM PARAMETER FILE
    param_file = "IA05.prm"
@@ -204,11 +203,8 @@ PROGRAM main
       ! close(19)
       ! write(*,*) "Loaded y0 from file."
 
-      ! cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
-      ! call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
-
-      name7 = dir(1:ndir)//'/hetero.bin'
-      call write_real_2DArray_bin(dble(dcorg), name7) ! write heterogeneity map to a file using self-written subroutine
+      !cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
+      !call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -229,18 +225,16 @@ PROGRAM main
 ! RENORMALIZATION
          !call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
          dc = dcorg ! skip renormalization, simply use section cut from full map.
-         write(*,*) maxval(dc), maxval(dcorg)
 
-         ! is it maybe enough to fill dcorg with the full het. map, and initialize x0 and y0 properly?
+         name7 = dir(1:ndir)//'/dc.dat'
+         call write_real_2DArray(dc, name7)
+
 ! INITIALIZATION OF PARAMETERS
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
          smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
          call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
             t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
-
-         !name7 = dir(1:ndir)//'/dc.dat'
-         !call write_real_2DArray(dc, name7)
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
@@ -265,6 +259,12 @@ PROGRAM main
          icheck = 0 ! later used to check if rupture reached domain boundaries
          itmx1 = kmax ! effective time limit for current iteration stage
          smoment = 0.0d0 ! seismic moment will be accumulated in smoment(k)
+
+         ! Setting book-keeping arrays for python output to 0 at the beginning of each stage
+         allRuptureTimes = 0 ! store rupture times in book keeping array
+         allSlips = 0
+         allOffplaneStresses = 0
+         allOnplaneStresses = 0
 
 ! ITERATION OF TIME
          TIME: do k = 1, kmax ! this is the main time loop, central piece of this code!!!
