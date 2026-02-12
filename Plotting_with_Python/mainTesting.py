@@ -29,7 +29,7 @@ scaleIndex = 1
 runName = "renorm_on_original" # name of selected run
 run = runs[runName]
 
-plotTimeSteps = [75, 76, 77, 150]
+plotTimeSteps = [75, 76, 77, 78]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
