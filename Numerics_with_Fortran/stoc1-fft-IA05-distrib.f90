@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -184,8 +184,8 @@ PROGRAM main
       if(isim.eq.6) ihypo = 13375
 
       !r_asperity = 100
-      call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
+      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
       !instead of generating the asperity map, load it from file
       ! open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
@@ -223,8 +223,8 @@ PROGRAM main
          nmax2 = nmax*nscale**iter ! For renormalization. nmax: number of grid cells in coarse grid, nmax2: "physical" size of region that coarse grid spans, in elementary grid cells
 
 ! RENORMALIZATION
-         !call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
-         dc = dcorg ! skip renormalization, simply use section cut from full map.
+         call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
+         !dc = dcorg ! skip renormalization, simply use section cut from full map.
 
          name7 = dir(1:ndir)//'/dc.dat'
          call write_real_2DArray(dc, name7)
@@ -401,21 +401,17 @@ PROGRAM main
 !        close(13)
 !      endif
 
-            if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of largest scale, or rupture has died out...
-               write(num,'(i5.5)') ihypo ! write final results to output files
-               write(num2,'(i1.1)') iter
-               name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
-               open(13, file=name3)
+            if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
+               ! write stage results to output files.
 
-               smo = 0.0d0
-               do i = 1, nmax
-                  do j = 1, nmax
-                     write(13, 105) i, j, dc(i,j)*ns, irup(i,j), w(i,j)*ns, dtau_offset(i,j)
-                     if(w(i,j).ne.0.) smo = smo + w(i,j)*ns
-105                  format(2i5, 1x, f9.3, i10, 1x, f9.3, 1x, f9.3)
-                  enddo
-               enddo
-               close(13)
+               ! Convert to physical outputs
+               coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
+               dsreal = 4.d0*ns*ds
+               dtreal = dsreal/(2.*alpha*1000.)
+
+               ! get file tags ready
+               write(num,'(i5.5)') ihypo
+               write(num2,'(i1.1)') iter
 
                !!! Writing new book-keeping files for python here !!!
                name99  = 'ruptureTimes'//num2(1:1)//'.bin'
@@ -431,32 +427,44 @@ PROGRAM main
                call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
                call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
-               coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
-               dsreal = 4.d0*ns*ds
-               dtreal = dsreal/(2.*alpha*1000.)
+               name3 = 'moment'//num2(1:1)//'.dat'
+               call write_real_1DArray(smoment, savePath1//name3)
 
-               smo = 4.*(smo/1000.)*dsreal**2*mu*10.0**9
-               mw = (log10(smo)-9.1)/1.5 ! calculate the magnitude of the event
-               name4 = dir(1:ndir)//'/output'//num(1:5)//'f.dat'
-               open(14, file=name4)
-               write(14, '(3i5)') ihypo, iter, k
-               write(14, '(e10.4, 2f10.3, f10.4)') smo, mw, dsreal, dtreal
-               do it=1, k
-                  write(14, '(i5,f12.4,2e12.4)') it, it*dtreal, smoment(it)*coef, &
-                     (smoment(it)-smoment(it-1))*coef/dtreal
-               enddo
-               close(14)
+!                name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
+!                open(13, file=name3)
 
-               name5 = dir(1:ndir)//'/moment'//num(1:5)//num2(1:1)//'.dat'
-               open(15, file=name5)
-               smo = 0.0d0
-               do k1 = 1, k
-                  smo = smo + smrate(k1)*dtreal*dsreal**2*mu*10.0**9
-                  mw =  (log10(smo)-9.1)/1.5
-                  write(15, '(f15.6, e15.5, e15.5, f15.5)') &
-                     k1*dtreal, smrate(k1)*dsreal**2*mu*10.0**9, smo, mw
-               enddo
-               close(15)
+!                smo = 0.0d0
+!                do i = 1, nmax
+!                   do j = 1, nmax
+!                      write(13, 105) i, j, dc(i,j)*ns, irup(i,j), w(i,j)*ns, dtau_offset(i,j)
+!                      if(w(i,j).ne.0.) smo = smo + w(i,j)*ns
+! 105                  format(2i5, 1x, f9.3, i10, 1x, f9.3, 1x, f9.3)
+!                   enddo
+!                enddo
+!                close(13)
+
+!                smo = 4.*(smo/1000.)*dsreal**2*mu*10.0**9
+!                mw = (log10(smo)-9.1)/1.5 ! calculate the magnitude of the event
+!                name4 = dir(1:ndir)//'/output'//num(1:5)//'f.dat'
+!                open(14, file=name4)
+!                write(14, '(3i5)') ihypo, iter, k
+!                write(14, '(e10.4, 2f10.3, f10.4)') smo, mw, dsreal, dtreal
+!                do it=1, k
+!                   write(14, '(i5,f12.4,2e12.4)') it, it*dtreal, smoment(it)*coef, &
+!                      (smoment(it)-smoment(it-1))*coef/dtreal
+!                enddo
+!                close(14)
+
+!                name5 = dir(1:ndir)//'/moment'//num(1:5)//num2(1:1)//'.dat'
+!                open(15, file=name5)
+!                smo = 0.0d0
+!                do k1 = 1, k
+!                   smo = smo + smrate(k1)*dtreal*dsreal**2*mu*10.0**9
+!                   mw =  (log10(smo)-9.1)/1.5
+!                   write(15, '(f15.6, e15.5, e15.5, f15.5)') &
+!                      k1*dtreal, smrate(k1)*dsreal**2*mu*10.0**9, smo, mw
+!                enddo
+!                close(15)
 
             endif
 
