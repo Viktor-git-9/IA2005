@@ -66,16 +66,18 @@ class runData:
         spec = self.variables[var]
         path = self.filePath(var, scale)
         shape = self.shapeFromSpec(spec)
+        
 
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")
             
         arr = loadBinArray(path, shape, dtype)
 
-        # return 2D slice if requested and variable has time dimension
-        if spec.timeDependent and timeInd is not None:
-            return arr[:, :, timeInd]
-        elif spec.timeDependent and timeInd is None:
-            return arr[:, :, :]
+        # for 3D array: return 2D slice if requested and variable has time dimension
+        if len(shape) == 3: 
+            if spec.timeDependent and timeInd is not None:
+                return arr[:, :, timeInd]
+            elif spec.timeDependent and timeInd is None:
+                return arr[:, :, :]
     
         return arr
