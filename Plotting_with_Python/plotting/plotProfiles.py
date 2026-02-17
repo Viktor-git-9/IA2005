@@ -105,13 +105,13 @@ def plotProfiles2x2plus1(datalist, titles=None, globalTitle='none'):
     plt.tight_layout()
     plt.show()
     
-def plotProfiles(data, axesLabels, lineLabels, globalTitle='none', stretchFactor = 'none'):
+def plotProfiles(data, axesLabels, lineLabels, globalTitle=None, stretchFactor=None):
     fig = plt.figure(figsize=(12, 10))
     ax = fig.add_axes([0, 0, 1, 1], frameon=False)
     
     #xvals:
+    N = len(data[0])
     if stretchFactor is not None:
-        N = len(data[0])
         xvals = np.linspace(1, stretchFactor * N, N)
     else:
         xvals = np.linspace(1, N, N)
