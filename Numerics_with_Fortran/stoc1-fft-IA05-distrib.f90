@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -23,7 +23,7 @@ PROGRAM main
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, & ! moved dcorg here!
       stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, &
       dc_full, dcorg
-   REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment
+   REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment, allMw
    REAL(8) :: pi, mu, const, facbiem, facfft, &
       tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
       p000, p000_offset, ker31s, ker32s, dtau, dsigma, alpha, &
@@ -110,7 +110,7 @@ PROGRAM main
       stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
       sigma(nmax, nmax),      w(nmax, nmax), &
       iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
-   ALLOCATE( smrate(0:itmx), smoment(0:itmx) )
+   ALLOCATE( smrate(0:itmx), smoment(0:itmx), allMw(0:itmx) )
    ALLOCATE( dcorg(ixmax, ixmax) )
    ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), &
       zans(ndata1*ndata2)) !, zans_offset(ndata1*ndata2), zresp_offset(ndata1*ndata2))
@@ -183,28 +183,29 @@ PROGRAM main
       if(isim.eq.5) ihypo = 12746
       if(isim.eq.6) ihypo = 13375
 
+      ! Renormalization ON: generate asperity map from scratch and then renormalize it with renormalize_dcmap
       !r_asperity = 100
       !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
-      !instead of generating the asperity map, load it from file
-      ! open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
-      ! read(19) dc_full
-      ! close(19)
-      ! write(*,*) "Loaded asperity map from file."
+      ! Renormalization OFF: instead of generating the asperity map, load it from file
+      open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
+      read(19) dc_full
+      close(19)
+      write(*,*) "Loaded asperity map from file."
 
-      ! open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
-      ! read(19) x0
-      ! close(19)
-      ! write(*,*) "Loaded x0 from file."
+      open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
+      read(19) x0
+      close(19)
+      write(*,*) "Loaded x0 from file."
 
-      ! open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
-      ! read(19) y0
-      ! close(19)
-      ! write(*,*) "Loaded y0 from file."
+      open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
+      read(19) y0
+      close(19)
+      write(*,*) "Loaded y0 from file."
 
-      !cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain. The output of this subroutine takes on the role of dcorg.
-      !call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+      ! Renormalization OFF: cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain.
+      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -223,8 +224,10 @@ PROGRAM main
          nmax2 = nmax*nscale**iter ! For renormalization. nmax: number of grid cells in coarse grid, nmax2: "physical" size of region that coarse grid spans, in elementary grid cells
 
 ! RENORMALIZATION
-         call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
-         !dc = dcorg ! skip renormalization, simply use section cut from full map.
+         ! Renormalization ON: call renormalization subroutine to get renormalized heterogeneity map for current scale stage.
+         ! call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
+         ! Renormalization OFF: no renormalization needed.
+          dc = dcorg ! skip renormalization, simply use section cut from full map.
 
          name7 = dir(1:ndir)//'/dc.dat'
          call write_real_2DArray(dc, name7)
@@ -265,6 +268,7 @@ PROGRAM main
          allSlips = 0
          allOffplaneStresses = 0
          allOnplaneStresses = 0
+         allMw = 0
 
 ! ITERATION OF TIME
          TIME: do k = 1, kmax ! this is the main time loop, central piece of this code!!!
@@ -386,20 +390,20 @@ PROGRAM main
             !write(*,*) "Stress at selected element: ", k, stress(50, 32), dtau, dsigma
             !write(*,*) "Data saved for time step ", k
 
-!      if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
-!	write(num, '(i5.5)') ihypo
-!        write(num2,'(i4.4)') iter*1000 + k
-!        name3 = dir(1:ndir)//'/'//num(1:5)//'_step'//num2(1:4)//'.dat'
-!        open(13, file=name3)
+         !   if( iter.le.npower ) then ! if final scale stage has not been reached, write output files every time step (took this out)
+      	!       write(num, '(i5.5)') ihypo
+         !     write(num2,'(i4.4)') iter*1000 + k
+         !     name3 = dir(1:ndir)//'/'//num(1:5)//'_step'//num2(1:4)//'.dat'
+         !     open(13, file=name3)
 
-!        do i = 1, nmax
-!          do j = 1, nmax
-!            write(13, '(f7.1, 1x, f7.1, 1x, 3f13.8)') &
-!     		real(i), real(j), vel(i,j,k)*alpha, w(i,j)*ns, stress(i,j)
-!          enddo
-!        enddo
-!        close(13)
-!      endif
+         !     do i = 1, nmax
+         !       do j = 1, nmax
+         !         write(13, '(f7.1, 1x, f7.1, 1x, 3f13.8)') &
+         !  		real(i), real(j), vel(i,j,k)*alpha, w(i,j)*ns, stress(i,j)
+         !       enddo
+         !     enddo
+         !     close(13)
+         !   endif
 
             if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
                ! write stage results to output files.
@@ -427,8 +431,24 @@ PROGRAM main
                call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
                call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
-               name3 = 'moment'//num2(1:1)//'.dat'
-               call write_real_1DArray(smoment, savePath1//name3)
+               !name3 = 'moment'//num2(1:1)//'.dat'
+               !call write_real_1DArray(smoment*(4.0d0/1000.0d0)*dsreal**2*mu*10.0**9, &
+               ! savePath1//name3, '(i5, 1x, ES25.16)')
+
+               !call write_real_1DArray(smrate*dtreal*dsreal**2*mu*10.0**9, &
+               ! savePath1//'momentRate'//num2(1:1)//'.dat', '(i5, 1x, ES25.16)')
+
+               smo = 0.0d0
+               do i = 2, k
+                  smo = smo + smrate(i-1)*dtreal*dsreal**2*mu*10.0**9
+                  mw =  (log10(smo)-9.1)/1.5
+                  allMw(i) = mw ! store magnitude history in array for later output
+               enddo
+               !call write_real_1DArray(allMw, savePath1//'magnitude'//num2(1:1)//'.dat', '(i5, 1x, ES25.16)')
+
+               call write_real_1DArray_bin(smoment, savePath1//'moment'//num2(1:1)//'.bin')
+               call write_real_1DArray_bin(smrate, savePath1//'momentRate'//num2(1:1)//'.bin')
+               call write_real_1DArray_bin(allMw, savePath1//'magnitude'//num2(1:1)//'.bin')
 
 !                name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
 !                open(13, file=name3)
