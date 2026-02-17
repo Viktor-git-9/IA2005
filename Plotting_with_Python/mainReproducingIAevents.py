@@ -9,7 +9,7 @@ from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2p
 from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/537/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/806/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -30,8 +30,12 @@ scaleIndex = 0
 runName = "renorm_on" # name of selected run
 run = runs[runName]
 
-#plotTimeSteps = [50, 100, 200, 300, 400, 500]
-plotTimeSteps = [10, 20, 30, 40, 50, 60, 80, 100]
+moment = run.load("moment", scaleIndex)
+momentRate = run.load("momentRate", scaleIndex)
+magnitude = run.load("magnitude", scaleIndex)
+
+plotTimeSteps = [50, 100, 200, 300, 400, 500]
+#plotTimeSteps = [10, 20, 30, 40, 50, 60, 80, 100]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
@@ -55,3 +59,8 @@ plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onpla
 ### plot Dc heterogeneity ###
 #heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
 #plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
+
+### plot moment, moment rate, moment magnitude ###
+plotProfiles([moment], ["time step", "seismic moment"], ["moment"])
+plotProfiles([momentRate], ["time step", "moment release rate"], ["momentRate"])
+plotProfiles([magnitude], ["time step", "magnitude"], ["magnitude"])
