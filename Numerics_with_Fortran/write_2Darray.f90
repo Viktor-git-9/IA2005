@@ -2,7 +2,7 @@ Module writeArrays
 IMPLICIT NONE
 CONTAINS
 
-SUBROUTINE write_real_1DArray(data, filename)
+SUBROUTINE write_real_1DArray(data, filename, format)
     ! Subroutine write_real_1Darray
     ! Write the indices and elements of a real double precision 1D array to a .dat file.
     ! Careful, this is slow for large arrays. Use for debugging.
@@ -12,15 +12,15 @@ SUBROUTINE write_real_1DArray(data, filename)
     IMPLICIT NONE
     INTEGER :: i, nRows
     DOUBLE PRECISION, intent(in) :: data(:)
-    CHARACTER(len=*), intent(in) :: filename
+    CHARACTER(len=*), intent(in) :: filename, format
     write(*,*) "Writing to file..."
     nRows = size(data)
     open(19, file=filename)
     do i = 1, nRows
-        write(19, 100) i, data(i)
+        write(19, format) i, data(i)
     enddo
     close(19)
-    100 format(i5, 1x, f15.6)
+    !100 format(i5, 1x, f15.6)
     write(*,*) "File written!"
 
 END SUBROUTINE
@@ -75,6 +75,20 @@ SUBROUTINE write_cmplx_2DArray(data, filename)
     enddo
     close(19)
     100 format(i5, 1x, i5, 1x, f15.6, 1x, f15.6)
+    write(*,*) "File written!"
+
+END SUBROUTINE
+
+SUBROUTINE write_real_1DArray_bin(data, filename)
+    IMPLICIT NONE
+    DOUBLE PRECISION, intent(in) :: data(:)
+    CHARACTER(len=*), intent(in) :: filename
+
+    write(*,*) "Writing real 1D to file ", filename
+    write(*,*) "Dimensions of data array:", size(data), size(data,1)
+    open(unit=19, file=filename, form="unformatted", access="stream")
+    write(19) data
+    close(19)
     write(*,*) "File written!"
 
 END SUBROUTINE
