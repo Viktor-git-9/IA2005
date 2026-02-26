@@ -27,15 +27,15 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "renorm_on" # name of selected run
+runName = "renorm_off" # name of selected run
 run = runs[runName]
 
 moment = run.load("moment", scaleIndex)
 momentRate = run.load("momentRate", scaleIndex)
 magnitude = run.load("magnitude", scaleIndex)
 
-plotTimeSteps = [50, 100, 200, 300, 400, 500]
-#plotTimeSteps = [10, 20, 30, 40, 50, 60, 80, 100]
+#plotTimeSteps = [50, 100, 200, 300, 400, 500]
+plotTimeSteps = [10+192, 20+192, 30+192, 40+192, 50+192, 60+192, 80+192, 100+192]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
@@ -61,6 +61,6 @@ plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onpla
 #plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
 
 ### plot moment, moment rate, moment magnitude ###
-plotProfiles([moment], ["time step", "seismic moment"], ["moment"])
-plotProfiles([momentRate], ["time step", "moment release rate"], ["momentRate"])
-plotProfiles([magnitude], ["time step", "magnitude"], ["magnitude"])
+#plotProfiles([moment], ["time step", "seismic moment"], ["moment"])
+#plotProfiles([momentRate], ["time step", "moment release rate"], ["momentRate"])
+#plotProfiles([magnitude], ["time step", "magnitude"], ["magnitude"])
