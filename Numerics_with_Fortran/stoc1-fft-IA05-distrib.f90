@@ -290,6 +290,8 @@ PROGRAM main
                   zvel(idata, k-1) = zdata(idata) ! zvel contains FFT results for all time steps
                enddo
 
+               !$acc parallel loop gang vector &
+               !$acc& copyin(zker, zvel) copyout(zans) private(n)
                do idata=1, ndata1*ndata2
                   zans(idata) = (0.0d0, 0.0d0) ! set zans to 0
                   !zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offet
@@ -301,6 +303,8 @@ PROGRAM main
                      !   zker_offset(idata, k-n)*zvel(idata, n) ! do the same for offplane kernel
                   enddo
                enddo
+               !$acc end parallel loop
+
                call fourn(zans, ndata, 2, -1) ! FFT backtransform to obtain stress change caused by past slip action
                !call fourn(zans_offset, ndata, 2, -1) ! same thing for offplane stress
             endif
