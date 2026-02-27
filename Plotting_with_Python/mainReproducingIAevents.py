@@ -9,7 +9,7 @@ from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2p
 from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/806/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/7987/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -27,15 +27,15 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "renorm_off" # name of selected run
+runName = "renorm_off_gpu" # name of selected run
 run = runs[runName]
 
 moment = run.load("moment", scaleIndex)
 momentRate = run.load("momentRate", scaleIndex)
 magnitude = run.load("magnitude", scaleIndex)
 
-#plotTimeSteps = [50, 100, 200, 300, 400, 500]
-plotTimeSteps = [10+192, 20+192, 30+192, 40+192, 50+192, 60+192, 80+192, 100+192]
+plotTimeSteps = [50, 100, 200, 300, 400, 500]
+#plotTimeSteps = [10+192, 20+192, 30+192, 40+192, 50+192, 60+192, 80+192, 100+192]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
