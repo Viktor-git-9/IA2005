@@ -16,8 +16,7 @@ else ifeq ($(MACHINE),cluster)
                  -ftree-parallelize-loops=4 -funroll-loops -mfma -mavx2
     	else ifeq ($(COMPILER),nvfortran)
         CC = nvfortran
-        FFLAGS = -acc -ta:tesla:cc80 -fPIC \
-                 -I/cm/shared/apps/nvidia-hpc-sdk-11.1/Linux_x86_64/20.11/cuda/11.1/include/ \
+        FFLAGS = -acc -gpu=cc70 -fPIC \
                  -Minfo=accel
     	endif
 endif
