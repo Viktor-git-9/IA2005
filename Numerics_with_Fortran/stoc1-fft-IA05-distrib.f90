@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 512, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
