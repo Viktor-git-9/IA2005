@@ -134,7 +134,7 @@ PROGRAM main
    !call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
    call date_and_time(VALUES=kernelEndTime)
 
-   kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Don't run this at midnight :)
+   kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Will fail at midnight :)
       (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
    write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
 
