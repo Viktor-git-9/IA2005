@@ -9,7 +9,7 @@ from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2p
 from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/7987/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/806/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -26,16 +26,19 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 #runs = {k: runs[k] for k in newOrder4runs}
 
 ### contour plots of specified run at specified time
-scaleIndex = 0
-runName = "renorm_off_gpu" # name of selected run
+scaleIndex = 1
+runName = "renorm_on" # name of selected run
 run = runs[runName]
 
-moment = run.load("moment", scaleIndex)
-momentRate = run.load("momentRate", scaleIndex)
-magnitude = run.load("magnitude", scaleIndex)
+#moment = run.load("moment", scaleIndex)
+#momentRate = run.load("momentRate", scaleIndex)
+#magnitude = run.load("magnitude", scaleIndex)
 
-plotTimeSteps = [50, 100, 200, 300, 400, 500]
-#plotTimeSteps = [10+192, 20+192, 30+192, 40+192, 50+192, 60+192, 80+192, 100+192]
+#plotTimeSteps = [10, 100, 215] # for event 7987
+#plotTimeSteps = [10, 100, 192] # for event 806
+#plotTimeSteps = [300, 400, 500] #  for stage 1 nrn
+#plotTimeSteps = [75, 100, 125] # for stage 1 rn
+plotTimeSteps = [10, 20, 30, 50]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
@@ -47,18 +50,21 @@ temp_onPlaneStress  = []
 for iTime in plotTimeSteps:
     #temp_rupTimes.append(run.load("ruptureTimes", scaleIndex, iTime))
     #temp_slipHis.append(run.load("slipHistories", scaleIndex, iTime))
-    #temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime))
-    #temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime)[95:160,95:160])
-    temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime))
+    
+    #temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime)[96:160,96:160])
+    temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime))
+    
+    #temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime)[96:160,96:160])
+    #temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime))
 
 #plotContours(temp_rupTimes, timeStepLabels, cbarLabels2, globalTitle="Rupture Times")
 #plotContours(temp_slipHis, timeStepLabels, cbarLabels2, globalTitle="Acc. Slip")
-#plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, globalTitle="Curr. Slip") 
-plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress", clims=[0, 6])
+plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, clims=[0, 0.5], globalTitle="Curr. Slip") 
+#plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress", clims=[0, 6])
 
 ### plot Dc heterogeneity ###
-#heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
-#plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity")
+heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
+plotContours([heterogeneity],  ["Dc"], globalTitle = "Dc heterogeneity", clims=[0, 5])
 
 ### plot moment, moment rate, moment magnitude ###
 #plotProfiles([moment], ["time step", "seismic moment"], ["moment"])

@@ -127,3 +127,61 @@ def plotProfiles(data, axesLabels, lineLabels, globalTitle=None, stretchFactor=N
        
     if globalTitle is not None:
         fig.suptitle(globalTitle, fontsize=16)
+
+def plot2Profiles(arrays, xlabel_bottom="Index (Array 1)", xlabel_top="Index (Array 2)",
+                    ylabel="Value", title=None, labels=None, lineInd=None):
+    """
+    Plot two 1D numpy arrays with different lengths using two x-axes.
+
+    Parameters
+    ----------
+    arrays : list of numpy.ndarray
+        List containing exactly two 1D arrays.
+    xlabel_bottom : str
+        Label for the bottom x-axis (array 1).
+    xlabel_top : str
+        Label for the top x-axis (array 2).
+    ylabel : str
+        Label for the y-axis.
+    title : str
+        Plot title.
+    labels : list of str
+        Labels for the two lines (for legend).
+    """
+
+    if len(arrays) != 2:
+        raise ValueError("arrays must contain exactly two numpy arrays")
+
+    arr1, arr2 = arrays
+
+    if labels is None:
+        labels = ["Array 1", "Array 2"]
+
+    x1 = np.arange(len(arr1))
+    x2 = np.arange(len(arr2))
+
+    fig, ax1 = plt.subplots()
+
+    # Bottom axis (array 1)
+    line1, = ax1.plot(x1, arr1, color="blue", label=labels[0])
+    ax1.set_xlabel(xlabel_bottom)
+    ax1.set_ylabel(ylabel)
+
+    # Top axis (array 2)
+    ax2 = ax1.twiny()
+    line2, = ax2.plot(x2, arr2, color="red", label=labels[1])
+    ax2.set_xlabel(xlabel_top)
+    
+    if lineInd:
+        plt.axvline(lineInd)
+
+    if title:
+        ax1.set_title(title)
+
+    # Combined legend
+    lines = [line1, line2]
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels, loc="upper left")
+
+    plt.tight_layout()
+    plt.show()
