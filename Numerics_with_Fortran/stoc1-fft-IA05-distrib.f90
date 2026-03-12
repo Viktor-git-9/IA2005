@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -118,8 +118,6 @@ PROGRAM main
    ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
    ALLOCATE(x0(16348), y0(16348)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
-! Creating asperity map with subroutine
-!call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
    if(ns.lt.1) ns = 1
@@ -144,8 +142,8 @@ PROGRAM main
 !write(12, '(5f10.3)') p000
 !close(12)
 
-!call write_cmplx_2DArray_bin(zker, savePath2 // 'zker.bin')
-!write(*,*) 'Made it here :)'
+call write_cmplx_2DArray_bin(zker, savePath2 // 'zker.bin')
+write(*,*) 'Made it here :)'
 
 ! Loading p000 and the Kernel from their respective files
 !open(12, file=savePath2 // 'p000_val.dat', status="old")
@@ -186,26 +184,27 @@ PROGRAM main
       ! Renormalization ON: generate asperity map from scratch and then renormalize it with renormalize_dcmap
       !r_asperity = 100
       !call make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-      !call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+      write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
 
       ! Renormalization OFF: instead of generating the asperity map, load it from file
-      open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
-      read(19) dc_full
-      close(19)
-      write(*,*) "Loaded asperity map from file."
+      ! open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
+      ! read(19) dc_full
+      ! close(19)
+      ! write(*,*) "Loaded asperity map from file."
 
-      open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
-      read(19) x0
-      close(19)
-      write(*,*) "Loaded x0 from file."
+      ! open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
+      ! read(19) x0
+      ! close(19)
+      ! write(*,*) "Loaded x0 from file."
 
-      open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
-      read(19) y0
-      close(19)
-      write(*,*) "Loaded y0 from file."
+      ! open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
+      ! read(19) y0
+      ! close(19)
+      ! write(*,*) "Loaded y0 from file."
 
       ! Renormalization OFF: cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain.
-      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+      ! call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
 
       write(num, '(i5.5)') ihypo
       name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -225,9 +224,9 @@ PROGRAM main
 
 ! RENORMALIZATION
          ! Renormalization ON: call renormalization subroutine to get renormalized heterogeneity map for current scale stage.
-         ! call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
+         call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
          ! Renormalization OFF: no renormalization needed.
-          dc = dcorg ! skip renormalization, simply use section cut from full map.
+         ! dc = dcorg ! skip renormalization, simply use section cut from full map.
 
          name7 = dir(1:ndir)//'/dc.dat'
          call write_real_2DArray(dc, name7)
@@ -292,7 +291,7 @@ PROGRAM main
 
                do idata=1, ndata1*ndata2
                   zans(idata) = (0.0d0, 0.0d0) ! set zans to 0
-                  !zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offet
+                  !zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offset
                   do n=1, k-1 ! this is the actual convolution, carried out over all previous time steps -> over the full slip velo history
                      zans(idata) = zans(idata) +  &
                         zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
