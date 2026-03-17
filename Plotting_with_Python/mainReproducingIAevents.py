@@ -26,8 +26,8 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 #runs = {k: runs[k] for k in newOrder4runs}
 
 ### contour plots of specified run at specified time
-scaleIndex = 1
-runName = "renorm_on" # name of selected run
+scaleIndex = 0
+runName = "renorm_off_fixed_2" # name of selected run
 run = runs[runName]
 
 #moment = run.load("moment", scaleIndex)
