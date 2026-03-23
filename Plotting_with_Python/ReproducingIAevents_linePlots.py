@@ -9,7 +9,7 @@ from plotting.plotProfiles import getProfiles, plotProfiles, plot2Profiles
 from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/806/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/537/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -27,14 +27,14 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 stageChangeInd = None # index of move from stage 0 to stage 1
-scaleIndex1 = 0
+scaleIndex1 = 1
 scaleIndex2 = 0
-cutOffInd1 = 220
-cutOffInd2 = 220
+cutOffInd1 = 35
+cutOffInd2 = 5*35
 runName1 = "renorm_on" # names of selected runs
 runName2 = "renorm_off"
-correctionFactor = 1
-plotTitle = "Event 806, Stage 0"
+correctionFactor = 1/16
+plotTitle = "Event 537, Stage 1"
 
 run_on = runs[runName1]
 run_off = runs[runName2]
