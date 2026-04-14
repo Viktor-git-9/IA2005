@@ -46,8 +46,8 @@ PROGRAM main
       zvel(:,:)!, zker(:,:)
    complex(4), allocatable :: zker(:,:)
    EXTERNAL ker31s, ker32s, ran1
-   CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
-   CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
+   CHARACTER(*), PARAMETER :: savePath1 = '/home/essbach/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
+   CHARACTER(*), PARAMETER :: savePath2 = '/home/essbach/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
    CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
@@ -132,7 +132,7 @@ PROGRAM main
    !call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
    call date_and_time(VALUES=kernelEndTime)
 
-   kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Don't run this at midnight :)
+   kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Will fail at midnight :)
       (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
    write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
 
@@ -243,7 +243,8 @@ PROGRAM main
 
 !!
 !! ITERATION OF STAGE
-!!
+!!    
+      !$acc data copyin(zker, zvel) copy(zans)
       STAGE: do iter = 0, npower ! loop over different scales
          kmax = itmx
          ns = nscale**iter ! scale factor determines how many original grid cells are aggregated into one cell. nscale = 4 by default
@@ -317,9 +318,16 @@ PROGRAM main
                   zvel(idata, k-1) = zdata(idata) ! zvel contains FFT results for all time steps
                enddo
 
+               ! Push updated column in zvel to GPU
+               !$acc update device(zvel(:, k-1))
+
+               ! GPU parallel section
+               !$acc parallel loop gang vector private(n)
                do idata=1, ndata1*ndata2
                   zans(idata) = (0.0d0, 0.0d0) ! set zans to 0
                   !zans_offset(idata) = (0.0d0, 0.0d0) ! do the same for zans_offset
+
+                  !$acc loop seq
                   do n=1, k-1 ! this is the actual convolution, carried out over all previous time steps -> over the full slip velo history
                      zans(idata) = zans(idata) +  &
                         zker(idata, k-n)*zvel(idata, n) ! multiply kernel with slip velo histories in frequency domain and sum up -> convolution in space domain
@@ -328,10 +336,16 @@ PROGRAM main
                      !   zker_offset(idata, k-n)*zvel(idata, n) ! do the same for offplane kernel
                   enddo
                enddo
-               call fourn(zans, ndata, 2, -1) ! FFT backtransform to obtain stress change caused by past slip action
+               !$acc end parallel loop
+
+               ! Bring zans back to CPU
+               !$acc update self(zans)
+
+               call fourn(zans, ndata, 2, -1) ! FFT backtransform on CPU to obtain stress change caused by past slip action
                !call fourn(zans_offset, ndata, 2, -1) ! same thing for offplane stress
             endif
 
+            ! double spatial loop on CPU updating zvel etc
             do i=1, nmax
                do j=1, nmax
                   idata = i + (j-1)*ndata1 ! map (i,j) to 1D vector array again
@@ -527,7 +541,10 @@ PROGRAM main
             endif
 
          enddo TIME
+         ! end of time loop.
       enddo STAGE
+      ! End of stage loop and parallelization data region.
+      !$acc end data
    enddo
 
 99 continue

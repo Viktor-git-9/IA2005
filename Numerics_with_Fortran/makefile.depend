@@ -1,0 +1,4 @@
+stoc1-fft-IA05-distrib.o: get_response_function.o write_2Darray.o make_DCmap.o initialize_params.o cut_from_full_Dc.o renormalize_Dcmap.o fourn-d.f
+get_response_function.o: fourn-d.f kernel31s_05Avril.f kernel32s_new5.f kernel33s_05Avril.f
+make_DCmap.f90: ran1.f
+
