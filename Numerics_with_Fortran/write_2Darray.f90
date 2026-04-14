@@ -109,7 +109,7 @@ END SUBROUTINE
 
 SUBROUTINE write_cmplx_2DArray_bin(data, filename)
     IMPLICIT NONE
-    DOUBLE COMPLEX, intent(in) :: data(:,:)
+    COMPLEX(4), intent(in) :: data(:,:)
     CHARACTER(len=*), intent(in) :: filename
 
     write(*,*) "Writing cx 2D to file ", filename
