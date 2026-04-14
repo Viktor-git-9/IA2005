@@ -1,20 +1,20 @@
 PROGRAM Dcmap_generator
     use makeDCmap
-    use precision_mod
     IMPLICIT NONE
 
     INTEGER nmax, nscale, nscale2, npower, npower2, ixmax, ndense, nhypo, stopInd, cutSection
-    REAL(preci) ds, dc0, r0
-    REAL(preci), DIMENSION(:), ALLOCATABLE :: x0, y0, x0_4_saving, y0_4_saving
-    REAL(preci), DIMENSION(:, :), ALLOCATABLE :: dcorg, dc_4_saving
+    REAL(8) ds, dc0, r0
+    REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, x0_4_saving, y0_4_saving
+    REAL(8), DIMENSION(:, :), ALLOCATABLE :: dcorg, dc_4_saving
     character(len=256) :: filename_hetero, filename_x0, filename_y0, line, key
     character(len=50)  :: str_var1, str_var2
     character(len=1) :: eq
     integer :: ios
     CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/'
+    LOGICAL, DIMENSION(:), ALLOCATABLE :: mask
 
     ! --- read input ---
-    open(unit=10, file="input.txt", status="old", action="read")
+    open(unit=10, file="input_DcMapGenerator.txt", status="old", action="read")
 
     do
         read(10, '(A)', iostat=ios) line
@@ -82,13 +82,16 @@ PROGRAM Dcmap_generator
     if (cutSection == 1) then ! there is also some trouble with this when setting nmax=64 - 02.04.2026
         write(*,*) "Cutting a section of the full heterogeneity map for saving..."
         dc_4_saving = dcorg(0:stopInd, 0:stopInd) ! cut appropriate section from dcorg
-        x0_4_saving = pack(x0, x0 <= stopInd)
-        y0_4_saving = pack(y0, y0 <= stopInd)
+        mask = (x0 <= stopInd) .and. (y0 <= stopInd)
+        x0_4_saving = pack(x0, mask)
+        y0_4_saving = pack(y0, mask)
     else
         dc_4_saving = dcorg ! save the full map without cutting
         x0_4_saving = x0
         y0_4_saving = y0
     end if
+
+    write(*,*) size(dc_4_saving), size(x0_4_saving), size(y0_4_saving)
 
     ! Convert variables to strings
     write(str_var1, '(G0)') ndense

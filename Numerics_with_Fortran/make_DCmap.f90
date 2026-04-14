@@ -65,7 +65,6 @@ MODULE makeDCmap
   END SUBROUTINE
 
   SUBROUTINE make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
-    use precision_mod
     IMPLICIT NONE
     INTEGER :: i, j, ixmax, ihypo
     REAL(8) :: dcmax, dc0, r_asperity, rad
