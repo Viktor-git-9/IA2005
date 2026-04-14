@@ -11,8 +11,9 @@ CONTAINS
         IMPLICIT NONE
         INTEGER :: k, idata, i, j, ix, iy, itmx, ndata1, ndata2, nmax, stressType
         INTEGER :: ndata(2)
-        DOUBLE COMPLEX :: zker(ndata1*ndata2, itmx), zresp(ndata1*ndata2)
-        DOUBLE PRECISION :: p000, facbiem, piece1, offset
+        COMPLEX(4) :: zker(:,:)
+        COMPLEX(8), allocatable :: zresp(:)
+        REAL(8) :: p000, facbiem, piece1, offset
         interface
             REAL(8) FUNCTION ker31s(c1,c2,c3,t,w)
             REAL(8), intent(in) :: c1,c2,c3,t,w
@@ -29,6 +30,8 @@ CONTAINS
         !
         ! RESPONSE FUNCTION (for of-plane shear stress calculation)
         !
+        ALLOCATE(zresp(ndata1*ndata2))
+
         ndata(1) = ndata1
 	    ndata(2) = ndata2
         select case(stressType)
@@ -51,7 +54,8 @@ CONTAINS
                     enddo
                     call fourn(zresp, ndata, 2, 1)
                     do idata=1, ndata1*ndata2
-                        zker(idata, k) = zresp(idata)
+                        !zker(idata, k) = zresp(idata)
+                        zker(idata, k) = cmplx(zresp(idata), kind=4)
                     enddo
                 enddo
 
