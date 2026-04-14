@@ -15,8 +15,8 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 64, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
-   PARAMETER ( itmx = 500 )
+   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( itmx = 10 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
       allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
@@ -37,13 +37,14 @@ PROGRAM main
       kmin, iter, kmax, itmx1, icheck, icheck2, it, &
       ndense, nasp, idum, iscale, ihypo, isim, isim0, nhypo, &
       nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2, diffTime, &
-      kernelDiffTime
+      kernelDiffTime, isimMax
    INTEGER :: ndata(2)
    INTEGER, DIMENSION(8) :: startTime, endTime, kernelStartTime, kernelEndTime
    complex(kind=kind(0d0)), allocatable :: &
-      zdata(:), zresp(:), zresp_offset(:), zans(:), zans_offset(:)
+      zdata(:), zans(:), zans_offset(:)
    complex(kind=kind(0d0)), allocatable :: &
-      zvel(:,:), zker(:,:), zker_offset(:,:)
+      zvel(:,:)!, zker(:,:)
+   complex(4), allocatable :: zker(:,:)
    EXTERNAL ker31s, ker32s, ran1
    CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
    CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
@@ -112,11 +113,10 @@ PROGRAM main
       iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
    ALLOCATE( smrate(0:itmx), smoment(0:itmx), allMw(0:itmx) )
    ALLOCATE( dcorg(ixmax, ixmax) )
-   ALLOCATE(zdata(ndata1*ndata2), zresp(ndata1*ndata2), &
-      zans(ndata1*ndata2)) !, zans_offset(ndata1*ndata2), zresp_offset(ndata1*ndata2))
-   ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx)) !, zker_offset(ndata1*ndata2, itmx))
-   ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
-   ALLOCATE(x0(16348), y0(16348)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
+   ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
+   ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx))
+   ALLOCATE(dc_full(256,256)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
+   ALLOCATE(x0(116), y0(116)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
@@ -142,8 +142,8 @@ PROGRAM main
 !write(12, '(5f10.3)') p000
 !close(12)
 
-!call write_cmplx_2DArray_bin(zker, savePath2 // 'zker.bin')
-!write(*,*) 'Made it here :)'
+! call write_cmplx_2DArray_bin(zker, savePath2 // 'zker_double.bin')
+! write(*,*) 'Made it here :)'
 
 ! Loading p000 and the Kernel from their respective files
 !open(12, file=savePath2 // 'p000_val.dat', status="old")
@@ -162,24 +162,47 @@ PROGRAM main
    write(12, '(4i10)') ndense, nscale2, npower2, nhypo
    close(12)
 
+   ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
+   ! to avoid loading the same data multiple times.
+   ! Renormalization OFF: instead of generating the asperity map, load it from file
+   open(unit=19, file=savePath2 // 'hetero_6_4.bin', form="unformatted", access="stream")
+   read(19) dc_full
+   close(19)
+   write(*,*) "Loaded asperity map from file."
+
+   open(unit=19, file=savePath2 // 'x0_6_4.bin', form="unformatted", access="stream")
+   read(19) x0
+   close(19)
+   write(*,*) "Loaded x0 from file."
+
+   open(unit=19, file=savePath2 // 'y0_6_4.bin', form="unformatted", access="stream")
+   read(19) y0
+   close(19)
+   write(*,*) "Loaded y0 from file."
+
+   isimMax = size(x0)
+   write(*,*) "Number of hypocenters to be tested:", isimMax
+
 !!
 !! ITERATION OF HYPOCENTER LOCATION
 !!
 !! isim0 read by a parameter file
-   do isim = isim0, isim0
+   !do isim = isim0, isim0
+   do isim = 1, isimMax
       ihypo = isim
+      write(*,*) "Now testing hypocenter location", ihypo, "out of", isimMax
 !! test
-      if(isim.eq.0) ihypo = 1
+      !if(isim.eq.0) ihypo = 1
 !! two scenarios of Mw3.8 for Aochi & Burnol (2018)
-      if(isim.eq.1) ihypo = 537
-      if(isim.eq.2) ihypo = 546
+      !if(isim.eq.1) ihypo = 537
+      !if(isim.eq.2) ihypo = 546
 ! for checking large events
-      if(isim.eq.1) ihypo = 806
-      if(isim.eq.2) ihypo = 7987
-      if(isim.eq.3) ihypo = 9141
-      if(isim.eq.4) ihypo = 10426
-      if(isim.eq.5) ihypo = 12746
-      if(isim.eq.6) ihypo = 13375
+      !if(isim.eq.1) ihypo = 806
+      !if(isim.eq.2) ihypo = 7987
+      !if(isim.eq.3) ihypo = 9141
+      !if(isim.eq.4) ihypo = 10426
+      !if(isim.eq.5) ihypo = 12746
+      !if(isim.eq.6) ihypo = 13375
 
       ! Renormalization ON: generate asperity map from scratch and then renormalize it with renormalize_dcmap
       !r_asperity = 100
@@ -187,31 +210,36 @@ PROGRAM main
       ! call make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
       ! write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
 
+      ! For testing (multiple) events on large het. map: loading het. map and hypocenter coordinates
+      ! inside the loop, so different sections of the het. map can be accessed.
       ! Renormalization OFF: instead of generating the asperity map, load it from file
-      open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
-      read(19) dc_full
-      close(19)
-      write(*,*) "Loaded asperity map from file."
+      ! open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
+      ! read(19) dc_full
+      ! close(19)
+      ! write(*,*) "Loaded asperity map from file."
 
-      open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
-      read(19) x0
-      close(19)
-      write(*,*) "Loaded x0 from file."
+      ! open(unit=19, file=savePath2 // 'full_x0.bin', form="unformatted", access="stream")
+      ! read(19) x0
+      ! close(19)
+      ! write(*,*) "Loaded x0 from file."
 
-      open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
-      read(19) y0
-      close(19)
-      write(*,*) "Loaded y0 from file."
+      ! open(unit=19, file=savePath2 // 'full_y0.bin', form="unformatted", access="stream")
+      ! read(19) y0
+      ! close(19)
+      ! write(*,*) "Loaded y0 from file."
 
       ! Renormalization OFF: cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain.
-      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+      ! Not necessary when testing the pre-prepared small het. maps!
+      !call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+      ! When testing small het. maps, simply use the section cut from the full map that was loaded before the loop:
+      dcorg = dc_full
 
-      write(num, '(i5.5)') ihypo
-      name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
-      open(16, file=name6)
-      write(16, '(i10, 2f10.3)') ihypo, x0(ihypo), y0(ihypo)
-      write(16, '(f10.3)') rini
-      close(16)
+      ! write(num, '(i5.5)') ihypo
+      ! name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
+      ! open(16, file=name6)
+      ! write(16, '(i10, 2f10.3)') ihypo, x0(ihypo), y0(ihypo)
+      ! write(16, '(f10.3)') rini
+      ! close(16)
 
 !!
 !! ITERATION OF STAGE
