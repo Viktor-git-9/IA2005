@@ -29,11 +29,11 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 stageChangeInd = None # index of move from stage 0 to stage 1
 scaleIndex1 = 1
 scaleIndex2 = 0
-cutOffInd1 = 35
-cutOffInd2 = 5*35
-runName1 = "renorm_on" # names of selected runs
-runName2 = "renorm_off"
-correctionFactor = 1/16
+cutOffInd1 = 30
+cutOffInd2 = 30
+runName1 = "renorm_off" # names of selected runs
+runName2 = "renorm_on"
+correctionFactor = 1
 plotTitle = "Event 537, Stage 1"
 
 run_on = runs[runName1]
