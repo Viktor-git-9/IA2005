@@ -16,7 +16,7 @@ PROGRAM main
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
    PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
-   PARAMETER ( itmx = 10 )
+   PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
       allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
@@ -44,7 +44,7 @@ PROGRAM main
       zdata(:), zans(:), zans_offset(:)
    complex(kind=kind(0d0)), allocatable :: &
       zvel(:,:)!, zker(:,:)
-   complex(4), allocatable :: zker(:,:)
+   complex(8), allocatable :: zker(:,:)
    EXTERNAL ker31s, ker32s, ran1
    CHARACTER(*), PARAMETER :: savePath1 = '/home/essbach/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
    CHARACTER(*), PARAMETER :: savePath2 = '/home/essbach/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
@@ -52,6 +52,8 @@ PROGRAM main
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
    CHARACTER*5  num, num2
+   CHARACTER(len=50)  :: isimString
+   CHARACTER(len=256) :: filenameMoment, filenameMomentrate, filenameMagnitude
 
 ! Say hello by printing system time
    call date_and_time(VALUES=startTime)
@@ -187,10 +189,14 @@ PROGRAM main
 !! ITERATION OF HYPOCENTER LOCATION
 !!
 !! isim0 read by a parameter file
+   ! Beginning of hypocenter loop and data parallelization region.
+   write(*,*) "Starting hypocenter loop, copying to GPU..."
+   !$acc data copyin(zker, zvel) copy(zans)
    !do isim = isim0, isim0
    do isim = 1, isimMax
       ihypo = isim
       write(*,*) "Now testing hypocenter location", ihypo, "out of", isimMax
+      write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
 !! test
       !if(isim.eq.0) ihypo = 1
 !! two scenarios of Mw3.8 for Aochi & Burnol (2018)
@@ -244,7 +250,6 @@ PROGRAM main
 !!
 !! ITERATION OF STAGE
 !!    
-      !$acc data copyin(zker, zvel) copy(zans)
       STAGE: do iter = 0, npower ! loop over different scales
          kmax = itmx
          ns = nscale**iter ! scale factor determines how many original grid cells are aggregated into one cell. nscale = 4 by default
@@ -265,7 +270,7 @@ PROGRAM main
          smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
          call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
-            t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini)
+            t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rini) ! changed xhypo and yhypo to x0(ihypo) and y0(ihypo)
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
@@ -465,12 +470,12 @@ PROGRAM main
                name96  = 'heterogeneity'//num2(1:1)//'.bin'
                name94  = 'onPlaneStress'//num2(1:1)//'.bin'
                name100 = 'slipVelocities'//num2(1:1)//'.bin'
-               call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
-               call write_real_3DArray_bin(allSlips, savePath1//name98)
-               call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
-               call write_real_2DArray_bin(dc*ns, savePath1//name96)
-               call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
-               call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
+               !call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
+               !call write_real_3DArray_bin(allSlips, savePath1//name98)
+               !call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
+               !call write_real_2DArray_bin(dc*ns, savePath1//name96)
+               !call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
+               !call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
                !name3 = 'moment'//num2(1:1)//'.dat'
                !call write_real_1DArray(smoment*(4.0d0/1000.0d0)*dsreal**2*mu*10.0**9, &
@@ -487,9 +492,16 @@ PROGRAM main
                enddo
                !call write_real_1DArray(allMw, savePath1//'magnitude'//num2(1:1)//'.dat', '(i5, 1x, ES25.16)')
 
-               call write_real_1DArray_bin(smoment, savePath1//'moment'//num2(1:1)//'.bin')
-               call write_real_1DArray_bin(smrate, savePath1//'momentRate'//num2(1:1)//'.bin')
-               call write_real_1DArray_bin(allMw, savePath1//'magnitude'//num2(1:1)//'.bin')
+               ! Convert isim to string
+               write(isimString, '(G0)') isim
+               ! Prepare filenames
+               filenameMoment = savePath1 // 'moment_' // trim(isimString) // '.bin'
+               filenameMomentrate = savePath1 // 'momentRate_' // trim(isimString) // '.bin'
+               filenameMagnitude = savePath1 // 'magnitude_' // trim(isimString) // '.bin'
+
+               call write_real_1DArray_bin(smoment, filenameMoment)
+               call write_real_1DArray_bin(smrate, filenameMomentrate)
+               call write_real_1DArray_bin(allMw, filenameMagnitude)
 
 !                name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
 !                open(13, file=name3)
@@ -543,9 +555,9 @@ PROGRAM main
          enddo TIME
          ! end of time loop.
       enddo STAGE
-      ! End of stage loop and parallelization data region.
-      !$acc end data
    enddo
+   ! End of hypocenter loop and parallelization data region.
+   !$acc end data
 
 99 continue
    write(*,*) "END OF SIMULATION"
