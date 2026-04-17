@@ -46,8 +46,10 @@ PROGRAM main
       zvel(:,:)!, zker(:,:)
    complex(8), allocatable :: zker(:,:)
    EXTERNAL ker31s, ker32s, ran1
-   CHARACTER(*), PARAMETER :: savePath1 = '/home/essbach/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
-   CHARACTER(*), PARAMETER :: savePath2 = '/home/essbach/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
+   ! CHARACTER(*), PARAMETER :: savePath1 = '/home/essbach/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
+   ! CHARACTER(*), PARAMETER :: savePath2 = '/home/essbach/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
+   CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
+   CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
    CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
@@ -118,7 +120,7 @@ PROGRAM main
    ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx))
    ALLOCATE(dc_full(256,256)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
-   ALLOCATE(x0(116), y0(116)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
+   ALLOCATE(x0(75), y0(75)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
@@ -167,17 +169,17 @@ PROGRAM main
    ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
    ! to avoid loading the same data multiple times.
    ! Renormalization OFF: instead of generating the asperity map, load it from file
-   open(unit=19, file=savePath2 // 'hetero_6_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'hetero_4_4.bin', form="unformatted", access="stream")
    read(19) dc_full
    close(19)
    write(*,*) "Loaded asperity map from file."
 
-   open(unit=19, file=savePath2 // 'x0_6_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'x0_4_4.bin', form="unformatted", access="stream")
    read(19) x0
    close(19)
    write(*,*) "Loaded x0 from file."
 
-   open(unit=19, file=savePath2 // 'y0_6_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'y0_4_4.bin', form="unformatted", access="stream")
    read(19) y0
    close(19)
    write(*,*) "Loaded y0 from file."
@@ -194,6 +196,7 @@ PROGRAM main
    !$acc data copyin(zker, zvel) copy(zans)
    !do isim = isim0, isim0
    do isim = 1, isimMax
+   !do isim = 28, 28
       ihypo = isim
       write(*,*) "Now testing hypocenter location", ihypo, "out of", isimMax
       write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
@@ -451,7 +454,8 @@ PROGRAM main
          !     close(13)
          !   endif
 
-            if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
+            !if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
+            if( k.eq.itmx.or.icheck2.eq.0) then ! Altered end criterion: only stop if max time steps reached or rupture died, allow rupture to reach boundary.
                ! write stage results to output files.
 
                ! Convert to physical outputs
@@ -470,12 +474,12 @@ PROGRAM main
                name96  = 'heterogeneity'//num2(1:1)//'.bin'
                name94  = 'onPlaneStress'//num2(1:1)//'.bin'
                name100 = 'slipVelocities'//num2(1:1)//'.bin'
-               !call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
-               !call write_real_3DArray_bin(allSlips, savePath1//name98)
-               !call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
-               !call write_real_2DArray_bin(dc*ns, savePath1//name96)
-               !call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
-               !call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
+               call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
+               call write_real_3DArray_bin(allSlips, savePath1//name98)
+               call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
+               call write_real_2DArray_bin(dc*ns, savePath1//name96)
+               call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
+               call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
                !name3 = 'moment'//num2(1:1)//'.dat'
                !call write_real_1DArray(smoment*(4.0d0/1000.0d0)*dsreal**2*mu*10.0**9, &
