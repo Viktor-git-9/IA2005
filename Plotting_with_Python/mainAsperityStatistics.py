@@ -286,10 +286,10 @@ def _make_dummy_files(data_dir: Path, n_steps: int, shape: tuple) -> None:
 
 if __name__ == "__main__":
     #import tempfile
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/8_4"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/4_4_new"
     
 
-    N_STEPS = 164
+    N_STEPS = 75
     SHAPE   = (501)   # adjust to match your actual array dimensions
 
 
