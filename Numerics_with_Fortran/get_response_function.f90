@@ -11,7 +11,7 @@ CONTAINS
         IMPLICIT NONE
         INTEGER :: k, idata, i, j, ix, iy, itmx, ndata1, ndata2, nmax, stressType
         INTEGER :: ndata(2)
-        COMPLEX(8) :: zker(:,:)
+        COMPLEX(4) :: zker(:,:)
         COMPLEX(8), allocatable :: zresp(:)
         REAL(8) :: p000, facbiem, piece1, offset
         interface
