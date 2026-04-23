@@ -70,8 +70,8 @@ PROGRAM Dcmap_generator
     npower2 = npower*2
 	nhypo = ndense*(nscale2*nscale2)**npower2
 
-    cutSection = 1 ! whether to cut a section from the full het. map for saving
-    stopInd = 255
+    !cutSection = 1 ! whether to cut a section from the full het. map for saving
+    !stopInd = 511 ! index up to which the section should be cut (if cutSection=1)
 
     ALLOCATE( dcorg(0:ixmax, 0:ixmax) )
     ALLOCATE( dc_4_saving(0:stopInd, 0:stopInd) )
