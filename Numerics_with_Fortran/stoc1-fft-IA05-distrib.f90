@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -42,9 +42,10 @@ PROGRAM main
    INTEGER, DIMENSION(8) :: startTime, endTime, kernelStartTime, kernelEndTime
    complex(kind=kind(0d0)), allocatable :: &
       zdata(:), zans(:), zans_offset(:)
-   complex(kind=kind(0d0)), allocatable :: &
-      zvel(:,:)!, zker(:,:)
-   complex(8), allocatable :: zker(:,:)
+   !complex(kind=kind(0d0)), allocatable :: &
+   !   zvel(:,:)!, zker(:,:)
+   complex(4), allocatable :: zker(:,:)
+   complex(4), allocatable :: zvel(:,:)
    EXTERNAL ker31s, ker32s, ran1
    ! CHARACTER(*), PARAMETER :: savePath1 = '/home/essbach/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
    ! CHARACTER(*), PARAMETER :: savePath2 = '/home/essbach/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
@@ -54,7 +55,7 @@ PROGRAM main
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
    CHARACTER*5  num, num2
-   CHARACTER(len=50)  :: isimString
+   CHARACTER(len=50)  :: isimString, timeStepString
    CHARACTER(len=256) :: filenameMoment, filenameMomentrate, filenameMagnitude
 
 ! Say hello by printing system time
@@ -119,8 +120,8 @@ PROGRAM main
    ALLOCATE( dcorg(ixmax, ixmax) )
    ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx))
-   ALLOCATE(dc_full(256,256)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
-   ALLOCATE(x0(75), y0(75)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
+   ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
+   ALLOCATE(x0(116), y0(116)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
@@ -169,17 +170,17 @@ PROGRAM main
    ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
    ! to avoid loading the same data multiple times.
    ! Renormalization OFF: instead of generating the asperity map, load it from file
-   open(unit=19, file=savePath2 // 'hetero_4_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
    read(19) dc_full
    close(19)
    write(*,*) "Loaded asperity map from file."
 
-   open(unit=19, file=savePath2 // 'x0_4_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'x0_6_4.bin', form="unformatted", access="stream")
    read(19) x0
    close(19)
    write(*,*) "Loaded x0 from file."
 
-   open(unit=19, file=savePath2 // 'y0_4_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'y0_6_4.bin', form="unformatted", access="stream")
    read(19) y0
    close(19)
    write(*,*) "Loaded y0 from file."
@@ -196,7 +197,7 @@ PROGRAM main
    !$acc data copyin(zker, zvel) copy(zans)
    !do isim = isim0, isim0
    do isim = 1, isimMax
-   !do isim = 28, 28
+   !do isim = 1, 1
       ihypo = isim
       write(*,*) "Now testing hypocenter location", ihypo, "out of", isimMax
       write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
@@ -240,6 +241,7 @@ PROGRAM main
       ! Renormalization OFF: cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain.
       ! Not necessary when testing the pre-prepared small het. maps!
       !call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+
       ! When testing small het. maps, simply use the section cut from the full map that was loaded before the loop:
       dcorg = dc_full
 
@@ -261,19 +263,22 @@ PROGRAM main
 
 ! RENORMALIZATION
          ! Renormalization ON: call renormalization subroutine to get renormalized heterogeneity map for current scale stage.
-         ! call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
+         call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
          ! Renormalization OFF: no renormalization needed.
-         dc = dcorg ! skip renormalization, simply use section cut from full map.
+         !dc = dcorg ! skip renormalization, simply use section cut from full map.
 
-         !name7 = dir(1:ndir)//'/dc.dat'
-         !call write_real_2DArray(dc, name7)
+         name7 = dir(1:ndir)//'/dc.dat'
+         call write_real_2DArray_bin(dc, name7)
 
 ! INITIALIZATION OF PARAMETERS
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
          smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
+         !call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
+         !   t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rini) ! changed xhypo and yhypo to x0(ihypo) and y0(ihypo)
+
          call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
-            t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rini) ! changed xhypo and yhypo to x0(ihypo) and y0(ihypo)
+            t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini) ! xhypo and yhypo restored here
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
@@ -309,6 +314,8 @@ PROGRAM main
 ! ITERATION OF TIME
          TIME: do k = 1, kmax ! this is the main time loop, central piece of this code!!!
             if( mod(k, 20).eq.0 ) write(6,'(a20, 3i5)') "SIMULATION", ihypo, iter, k ! write hypocenter location, scale stage, and time step to terminal
+            write(timeStepString, '(G0)') k
+            if( mod(k, 20).eq.0 ) call print_mem("Memory usage at time step " // trim(timeStepString)) ! print memory usage to terminal every 20 time steps
             icheck2 = 0 ! tracks if any cell is slipping at current time-step
 
             if ( k.ne.1 ) then ! if the first time step has passed...
@@ -323,7 +330,7 @@ PROGRAM main
                enddo
                call fourn(zdata, ndata, 2, 1) ! now, run FFT with slip velo history
                do idata=1, ndata1*ndata2
-                  zvel(idata, k-1) = zdata(idata) ! zvel contains FFT results for all time steps
+                  zvel(idata, k-1) = cmplx(zdata(idata), kind=4) ! zvel contains FFT results for all time steps
                enddo
 
                ! Push updated column in zvel to GPU
@@ -454,8 +461,8 @@ PROGRAM main
          !     close(13)
          !   endif
 
-            !if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
-            if( k.eq.itmx.or.icheck2.eq.0) then ! Altered end criterion: only stop if max time steps reached or rupture died, allow rupture to reach boundary.
+            if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
+            !if( k.eq.itmx.or.icheck2.eq.0) then ! Altered end criterion: only stop if max time steps reached or rupture died, allow rupture to reach boundary.
                ! write stage results to output files.
 
                ! Convert to physical outputs
@@ -466,20 +473,21 @@ PROGRAM main
                ! get file tags ready
                write(num,'(i5.5)') ihypo
                write(num2,'(i1.1)') iter
+               write(isimString, '(G0)') isim
 
                !!! Writing new book-keeping files for python here !!!
-               name99  = 'ruptureTimes'//num2(1:1)//'.bin'
-               name98  = 'slipHistories'//num2(1:1)//'.bin'
-               name97  = 'offPlaneStress'//num2(1:1)//'.bin'
-               name96  = 'heterogeneity'//num2(1:1)//'.bin'
-               name94  = 'onPlaneStress'//num2(1:1)//'.bin'
-               name100 = 'slipVelocities'//num2(1:1)//'.bin'
+               name99  = 'ruptureTimes'//num2(1:1)// '_' // trim(isimString) // '.bin'
+               name98  = 'slipHistories'//num2(1:1)// '_' // trim(isimString) // '.bin'
+               name97  = 'offPlaneStress'//num2(1:1)// '_' // trim(isimString) // '.bin'
+               name96  = 'heterogeneity'//num2(1:1)// '_' // trim(isimString) // '.bin'
+               name94  = 'onPlaneStress'//num2(1:1)// '_' // trim(isimString) // '.bin'
+               name100 = 'slipVelocities'//num2(1:1)// '_' // trim(isimString) // '.bin'
                call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
-               call write_real_3DArray_bin(allSlips, savePath1//name98)
-               call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
-               call write_real_2DArray_bin(dc*ns, savePath1//name96)
-               call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
-               call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
+               !call write_real_3DArray_bin(allSlips, savePath1//name98)
+               !call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
+               !call write_real_2DArray_bin(dc*ns, savePath1//name96)
+               !call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
+               !call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
                !name3 = 'moment'//num2(1:1)//'.dat'
                !call write_real_1DArray(smoment*(4.0d0/1000.0d0)*dsreal**2*mu*10.0**9, &
@@ -496,8 +504,6 @@ PROGRAM main
                enddo
                !call write_real_1DArray(allMw, savePath1//'magnitude'//num2(1:1)//'.dat', '(i5, 1x, ES25.16)')
 
-               ! Convert isim to string
-               write(isimString, '(G0)') isim
                ! Prepare filenames
                filenameMoment = savePath1 // 'moment_' // trim(isimString) // '.bin'
                filenameMomentrate = savePath1 // 'momentRate_' // trim(isimString) // '.bin'
