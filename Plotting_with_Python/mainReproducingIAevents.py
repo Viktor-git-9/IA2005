@@ -8,8 +8,40 @@ from plotting.plotContour import plotContours, plotContour2x2, plotContour2x2plu
 from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2plus1, plotProfiles
 from plotting.plotMesh import plotMeshSlices
 
+def patch_extents(arrays):
+    """
+    Determine x- and y-extent of the non--1 patch in each 2D array.
+    To be used on the rupture time patches.
+
+    Parameters
+    ----------
+    arrays : list of 2D numpy arrays
+
+    Returns
+    -------
+    extents : list of tuples
+        Each tuple is (x_extent, y_extent)
+    """
+    extents = []
+
+    for arr in arrays:
+        y_idx, x_idx = np.where(arr != -1)
+
+        if len(x_idx) == 0:
+            # no patch found
+            extents.append((0, 0))
+            continue
+
+        x_extent = x_idx.max() - x_idx.min() + 1
+        y_extent = y_idx.max() - y_idx.min() + 1
+
+        extents.append((x_extent, y_extent))
+
+    return extents
+
+
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/28/")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/6_4_event116/")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -27,7 +59,7 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "test" # name of selected run
+runName = "myRun" # name of selected run
 run = runs[runName]
 
 #moment = run.load("moment", scaleIndex)
@@ -38,7 +70,8 @@ run = runs[runName]
 #plotTimeSteps = [10, 50, 100, 192] # for event 806
 #plotTimeSteps = [300, 400, 500] #  for stage 1 nrn
 #plotTimeSteps = [75, 100, 125] # for stage 1 rn
-plotTimeSteps = [10, 20, 30, 50]
+plotTimeSteps = [280]
+#plotTimeSteps = [10, 500, 750, 1000]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
 cbarLabels2 = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
@@ -48,19 +81,21 @@ temp_slipVelo = []
 temp_onPlaneStress  = []
 
 for iTime in plotTimeSteps:
-    #temp_rupTimes.append(run.load("ruptureTimes", scaleIndex, iTime))
-    #temp_slipHis.append(run.load("slipHistories", scaleIndex, iTime))
+    temp_rupTimes.append(run.load("ruptureTimes", scaleIndex, iTime))
+    temp_slipHis.append(run.load("slipHistories", scaleIndex, iTime))
     
     #temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime)[96:160,96:160])
     #temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime))
     
     #temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime)[96:160,96:160])
     temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime))
+    
+rupture_extents = patch_extents(temp_rupTimes)
 
-#plotContours(temp_rupTimes, timeStepLabels, cbarLabels2, globalTitle="Rupture Times")
-#plotContours(temp_slipHis, timeStepLabels, cbarLabels2, globalTitle="Acc. Slip")
+plotContours(temp_rupTimes, timeStepLabels, ["Rupture times [dt]"], globalTitle="Rupture Times")
+plotContours(temp_slipHis, timeStepLabels, ["Slip [m?]"], globalTitle="Acc. Slip")
 #plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, clims=[0, 0.5], globalTitle="Curr. Slip") 
-plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress", clims=[0, 6])
+#plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress for large event at density = 6", clims=[0, 6])
 
 ### plot Dc heterogeneity ###
 #heterogeneity = run.load("heterogeneity", scaleIndex, iTime)

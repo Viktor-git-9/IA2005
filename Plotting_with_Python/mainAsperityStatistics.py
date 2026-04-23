@@ -18,6 +18,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator
+from plotting.plotProfiles import plotProfiles
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -245,7 +246,7 @@ class SimulationData:
 # Plotting
 # ------------------------------------------------------------------
     
-def plotHistogram(data, bins, figLabels = None, figTitle = None, textCount = None):
+def plotHistogram(data, bins, figLabels = None, figTitle = None, figSubTitle = None, textCount = None):
     fig = plt.figure(figsize=(5, 8))
     ax = fig.add_subplot(1,1,1)
     ax.hist(data, bins)
@@ -255,6 +256,7 @@ def plotHistogram(data, bins, figLabels = None, figTitle = None, textCount = Non
     
     if figTitle != 'None':
         fig.suptitle(figTitle, fontsize=16)
+        plt.title(figSubTitle, fontsize = 12)
         
     #Add text
     if textCount != 'None':
@@ -286,10 +288,10 @@ def _make_dummy_files(data_dir: Path, n_steps: int, shape: tuple) -> None:
 
 if __name__ == "__main__":
     #import tempfile
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/4_4_new"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_rn"
     
 
-    N_STEPS = 75
+    N_STEPS = 116
     SHAPE   = (501)   # adjust to match your actual array dimensions
 
 
@@ -307,15 +309,15 @@ if __name__ == "__main__":
     # -----------------------------------------------------------
     # 2. Pin a few steps you want to keep in memory
     # -----------------------------------------------------------
-    sim.pin([1, 5, 10, 20])
+    sim.pin([116])
 
     # -----------------------------------------------------------
     # 3. Quick access to a pinned step (no disk read)
     # -----------------------------------------------------------
-    step5 = sim[5]
+    step116 = sim[116]
     print("\n--- Single step access ---")
-    print(step5.summary())
-    print("Max values:", step5.max_values())
+    print(step116.summary())
+    print("Max values:", step116.max_values())
 
     
     # -----------------------------------------------------------
@@ -333,7 +335,11 @@ if __name__ == "__main__":
     histoBins = np.linspace(0, 3.5, 10)
     histoLabels = ["magnitude", "N"]
     histoTitle = 'Magnitude Distribution'
-    plotHistogram(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = histoTitle, textCount = unfinishedCount)
+    plotHistogram(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = histoTitle, figSubTitle = "Timesteps: " + str(SHAPE), textCount = unfinishedCount)
+    
+    plotProfiles([eventMagnitudes], ["ihypo", "Magnitudes"], "mag")
+    
+    
     
 # -------------------------------------------------------------
 # Some cool things
