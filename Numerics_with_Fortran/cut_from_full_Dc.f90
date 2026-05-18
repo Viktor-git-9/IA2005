@@ -20,6 +20,8 @@ SUBROUTINE cut_from_full_Dc(dc_full, dcorg, hypocenter_x, hypocenter_y, dim_x, d
     ! Calculate the starting and ending indices for cutting the subarray
     ! Setup to center around upper left corner of grid cell containing hypocenter
     ! Approach taken from renormalize_Dcmap.f90.
+    ! This is lacking a solution for hypocenters close to the boundaries of the
+    ! full Dc Map currently!!!
 
     renormDim_x = 4096  ! this needs to be adapted to the size of the full renormalization domain,
     renormDim_y = 4096  ! which with nmax=64, nscale=4, npower=3 is 4096x4096
@@ -34,8 +36,8 @@ SUBROUTINE cut_from_full_Dc(dc_full, dcorg, hypocenter_x, hypocenter_y, dim_x, d
     if(j_start > renormDim_y) j_start = j_start - renormDim_y
     j_end = j_start + dim_y - 1
 
-    ! write(*,*) "Calculated cutting indices: i_start =", i_start, ", i_end =", i_end, &
-    !            ", j_start =", j_start, ", j_end =", j_end
+    write(*,*) "Calculated cutting indices: i_start =", i_start, ", i_end =", i_end, &
+               ", j_start =", j_start, ", j_end =", j_end
 
     ! Allocate the output array based on the calculated dimensions
     ALLOCATE(dcorg(dim_x, dim_y)) ! there used to be +1 here.
