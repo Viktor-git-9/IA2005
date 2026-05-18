@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 64, nscale = 4, npower = 3, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 64, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -121,7 +121,7 @@ PROGRAM main
    ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx))
    ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
-   ALLOCATE(x0(116), y0(116)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
+   ALLOCATE(x0(33), y0(33)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
@@ -170,23 +170,26 @@ PROGRAM main
    ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
    ! to avoid loading the same data multiple times.
    ! Renormalization OFF: instead of generating the asperity map, load it from file
-   open(unit=19, file=savePath2 // 'full_hetero.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'full_hetero_2_4.bin', form="unformatted", access="stream")
    read(19) dc_full
    close(19)
    write(*,*) "Loaded asperity map from file."
 
-   open(unit=19, file=savePath2 // 'x0_6_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'x0_2_4.bin', form="unformatted", access="stream")
    read(19) x0
    close(19)
    write(*,*) "Loaded x0 from file."
 
-   open(unit=19, file=savePath2 // 'y0_6_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'y0_2_4.bin', form="unformatted", access="stream")
    read(19) y0
    close(19)
    write(*,*) "Loaded y0 from file."
 
    isimMax = size(x0)
    write(*,*) "Number of hypocenters to be tested:", isimMax
+
+   !dc_full = transpose(dc_full)
+   !write(*,*) "Transposed asperity map."
 
 !!
 !! ITERATION OF HYPOCENTER LOCATION
@@ -240,10 +243,10 @@ PROGRAM main
 
       ! Renormalization OFF: cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain.
       ! Not necessary when testing the pre-prepared small het. maps!
-      !call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
 
       ! When testing small het. maps, simply use the section cut from the full map that was loaded before the loop:
-      dcorg = dc_full
+      !dcorg = dc_full
 
       ! write(num, '(i5.5)') ihypo
       ! name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -263,12 +266,13 @@ PROGRAM main
 
 ! RENORMALIZATION
          ! Renormalization ON: call renormalization subroutine to get renormalized heterogeneity map for current scale stage.
-         call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
+         !call renormalize_dcmap(dc, dcorg, x0, y0, ihypo, nmax, nmax2, ixmax, ns) ! call subroutine for renormalization of the heterogeneity map.
          ! Renormalization OFF: no renormalization needed.
-         !dc = dcorg ! skip renormalization, simply use section cut from full map.
+         dc = dcorg ! skip renormalization, simply use section cut from full map.
 
          name7 = dir(1:ndir)//'/dc.dat'
-         call write_real_2DArray_bin(dc, name7)
+         !call write_real_2DArray_bin(dc, name7)
+         call write_real_2DArray(dc, name7)
 
 ! INITIALIZATION OF PARAMETERS
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
@@ -278,7 +282,7 @@ PROGRAM main
          !   t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rini) ! changed xhypo and yhypo to x0(ihypo) and y0(ihypo)
 
          call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
-            t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini) ! xhypo and yhypo restored here
+            t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini) ! Hypocenters in center of domain: xhypo, yhypo; Hypocenters moving around: x0(ihypo), y0(ihypo)
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
@@ -461,8 +465,9 @@ PROGRAM main
          !     close(13)
          !   endif
 
-            if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
+            !if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
             !if( k.eq.itmx.or.icheck2.eq.0) then ! Altered end criterion: only stop if max time steps reached or rupture died, allow rupture to reach boundary.
+            if( k.eq.itmx.or.icheck.eq.1.or.icheck2.eq.0) then ! End criterion (***): stopping when rupture reaches boundary at first stage
                ! write stage results to output files.
 
                ! Convert to physical outputs
@@ -485,7 +490,7 @@ PROGRAM main
                call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
                !call write_real_3DArray_bin(allSlips, savePath1//name98)
                !call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
-               !call write_real_2DArray_bin(dc*ns, savePath1//name96)
+               call write_real_2DArray_bin(dc*ns, savePath1//name96)
                !call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
                !call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
@@ -560,6 +565,16 @@ PROGRAM main
             if(icheck2.eq.0) then
                write(6,*) "rupture terminated", iter, k
                exit STAGE
+            endif
+
+            if(k.eq.itmx) then
+               write(6,*) "max iterations reached", iter, k
+               exit STAGE
+            endif
+
+            if(icheck.eq.1) then ! Use this in compund with end criterion (***)
+               write(6,*) "rupture reached boundary", iter, k
+               exit STAGE ! Altered end criterion: stopping when rupture reaches boundary of first stage
             endif
 
          enddo TIME
