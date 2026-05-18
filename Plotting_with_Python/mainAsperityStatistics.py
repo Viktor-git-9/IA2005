@@ -288,11 +288,12 @@ def _make_dummy_files(data_dir: Path, n_steps: int, shape: tuple) -> None:
 
 if __name__ == "__main__":
     #import tempfile
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_rn"
+    #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_single"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/constraining_the_nrn_range/remote_256els/4_4_cut_from_center/lineData"
     
 
-    N_STEPS = 116
-    SHAPE   = (501)   # adjust to match your actual array dimensions
+    N_STEPS = 63
+    SHAPE   = (1001)   # adjust to match your actual array dimensions
 
 
     data_dir = Path(data_path)
@@ -304,40 +305,64 @@ if __name__ == "__main__":
     # 1. Initialise
     # -----------------------------------------------------------
     sim = SimulationData(data_dir, n_steps=N_STEPS, shape=SHAPE)
-    print(sim)
-
-    # -----------------------------------------------------------
-    # 2. Pin a few steps you want to keep in memory
-    # -----------------------------------------------------------
-    sim.pin([116])
-
-    # -----------------------------------------------------------
-    # 3. Quick access to a pinned step (no disk read)
-    # -----------------------------------------------------------
-    step116 = sim[116]
-    print("\n--- Single step access ---")
-    print(step116.summary())
-    print("Max values:", step116.max_values())
 
     
     # -----------------------------------------------------------
     # 4. My own stuff
     # -----------------------------------------------------------
     eventMagnitudes = []
+    eventStopInds   = []
     unfinishedCount = 0
     for step in sim.iter_steps():
         step_max = step.magnitude.max()
         eventMagnitudes.append(step_max)
+        eventStopInds.append(np.max(np.nonzero(step.magnitude)))
         
         if step.magnitude[-1] != 0:
             unfinishedCount = unfinishedCount + 1
+            
+    eventIndsSorted = np.flip(np.argsort(eventMagnitudes))
         
     histoBins = np.linspace(0, 3.5, 10)
     histoLabels = ["magnitude", "N"]
     histoTitle = 'Magnitude Distribution'
     plotHistogram(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = histoTitle, figSubTitle = "Timesteps: " + str(SHAPE), textCount = unfinishedCount)
     
-    plotProfiles([eventMagnitudes], ["ihypo", "Magnitudes"], "mag")
+    #plotProfiles([eventMagnitudes], ["ihypo", "Magnitudes"], "mag")
+    
+    selectedRuns = np.array(eventIndsSorted[0:9])+1
+    selectedStopInds = np.array(eventStopInds)[selectedRuns-1]
+    
+    # -----------------------------------------------------------
+    # 2. Pin a few steps you want to keep in memory
+    # -----------------------------------------------------------
+    #selectedRuns = [21, 56, 59, 98, 81, 24, 79, 116, 53] # python indexing starts at 0, but run file numbering starts at 1 so n->n+1
+    #selectedRuns = [18, 27, 8, 23, 52, 6, 13, 44, 53] # for 4_4 cut from center
+    #selectedRuns = [62, 13, 69, 15, 61, 23, 2, 33, 95] # for 6_4 cut from center
+    #selectedRuns = [14, 18, 16, 2, 6, 27, 5, 9, 23]
+    #selectedRuns = [14]
+    selectedRunsStrings = list(map(str, selectedRuns))
+    sim.pin(selectedRuns)
+     
+    # -----------------------------------------------------------
+    # 3. Quick access to a pinned step (no disk read)
+    # -----------------------------------------------------------
+    printStep = sim[32]
+    #printSteps = [sim[86]]
+    print("\n--- Single step access ---")
+    print(printStep.summary())
+    print("Max values:", printStep.max_values())
+     
+    largestMags = []
+     
+    #plotProfiles([printStep.magnitude], ["time [dt]", "Magnitude"], "data")
+    for isim in sim._pinned:
+        currentSim = sim._pinned[isim]
+        currentMag = currentSim.magnitude
+        largestMags.append(currentMag)
+        #plotProfiles([currentMag], ["time [dt]", "Magnitude"], "data")
+         
+    plotProfiles(largestMags, ["time [dt]", "Magnitude"], selectedRunsStrings, globalTitle = "Magnitude time series of 9 largest events", XLIMS = [0, 1000])
     
     
     
