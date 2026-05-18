@@ -3,7 +3,8 @@ MODULE makeDCmap
   Contains
 
   SUBROUTINE make_fractal_DCmap(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
-    ! Description goes here
+    ! Legacy Dcmap generator, which builds asperity map of size given by nmax*nscale**npower,
+    ! taken directly from Hideo's version.
     IMPLICIT NONE
     INTEGER :: nscale, npower, idum, iscale, ihypo, i, j, i1, j1, &
     nhypo, ndense, nscale2, npower2, nasp, ixmax
@@ -62,6 +63,75 @@ MODULE makeDCmap
             enddo
           enddo
   write(*,*) "Fractal asperity map ready."
+  END SUBROUTINE
+
+  SUBROUTINE make_fractal_DCmap_II(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+    ! This was adapted on 18/05/2026
+    ! Builds asperity map of size specified by nmax,
+    ! with npower*2 + 1 asperity species that scale as determined by nscale.
+    ! Asperities that would touch the domain borders are cut off.
+    IMPLICIT NONE
+    INTEGER :: nscale, npower, idum, iscale, ihypo, i, j, i1, j1, &
+    nhypo, nscale2, npower2, nasp, ixmax, skipCount
+    REAL(8), intent(inout) :: dcorg(:,:)
+    REAL(8), intent(out), allocatable :: x0(:), y0(:)
+    REAL(8) :: dcmax, dc0, r0, r0dum, dcdum, xo, yo, rad, ndense
+
+    interface
+      REAL FUNCTION ran1(idhypo)
+      INTEGER, intent(in) :: idhypo
+      END FUNCTION ran1
+    end interface
+
+
+    idum = -412
+    !dcmax = dc0*nscale**(npower + 1)
+    dcmax = 4000*dc0
+    dcorg = real(dcmax)
+
+    nscale2 = nscale/2
+    npower2 = npower*2
+    nhypo = int(ndense*(nscale2*nscale2)**npower2)
+    skipCount = 0
+    write(*,*) "Creating fractal asperity map..."
+    ALLOCATE( x0(nhypo), y0(nhypo) )
+
+          do iscale = 0,  npower2
+            nasp = int(ndense*(nscale2*nscale2)**(npower2 - iscale))
+            write(*,*) "Scale ", iscale, " with ", nasp, " asperities."
+            r0dum = r0*nscale2**iscale
+            dcdum = dc0*nscale2**iscale
+            ihypo = 1
+            !do ihypo = 1, nasp
+            do while (ihypo <= nasp)
+              xo = ran1(idum)*ixmax
+              yo = ran1(idum)*ixmax
+              if(iscale.eq.0 ) then
+                  !write(*,*) "Asperity at (", xo, ",", yo, ")"
+                  x0(ihypo) = xo
+                  y0(ihypo) = yo
+              endif
+
+              if (xo - r0dum < 1 .or. xo + r0dum > ixmax .or. yo - r0dum < 1 .or. yo + r0dum > ixmax) then
+                skipCount = skipCount + 1
+              else
+
+              do i = int(xo - r0dum)-1, int(xo + r0dum)+1
+                do j = int(yo - r0dum)-1, int(yo + r0dum)+1
+                  rad = sqrt((i-xo)**2 + (j-yo)**2)
+                  if( rad.le.r0dum ) then
+                    if( dcorg(i,j).gt.dcdum ) dcorg(i,j) = real(dcdum)
+                  endif
+                enddo
+              enddo
+              ihypo = ihypo + 1
+              endif
+
+            enddo
+          enddo
+  write(*,*) "Skipped ", skipCount, " asperities that would have been cut off at the boundaries."
+  write(*,*) "Fractal asperity map ready."
+
   END SUBROUTINE
 
   SUBROUTINE make_homogeneous_DCmap(dcorg, x0, y0, ixmax, dc0, dcmax, r_asperity, ihypo)
