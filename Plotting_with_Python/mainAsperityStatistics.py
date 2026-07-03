@@ -247,9 +247,10 @@ class SimulationData:
 # ------------------------------------------------------------------
     
 def plotHistogram(data, bins, figLabels = None, figTitle = None, figSubTitle = None, textCount = None):
-    fig = plt.figure(figsize=(5, 8))
+    fig = plt.figure(figsize=(6, 8))
     ax = fig.add_subplot(1,1,1)
     ax.hist(data, bins)
+    #ax.set_yscale("log", base=10)
     
     fig.supxlabel(figLabels[0])
     fig.supylabel(figLabels[1])
@@ -268,6 +269,40 @@ def plotHistogram(data, bins, figLabels = None, figTitle = None, figSubTitle = N
             verticalalignment='top')
         
     plt.grid()
+    
+def plotHistoCum(data, bins, figLabels = None, figTitle = None, figSubTitle = None, textCount = None):
+    fig = plt.figure(figsize=(6, 8))
+    ax = fig.add_subplot(1,1,1)
+    ax.ecdf(data, complementary=True)
+    ax.set_yscale("log", base=10)
+    
+    fig.supxlabel(figLabels[0])
+    fig.supylabel(figLabels[1])
+    
+    if figTitle != 'None':
+        fig.suptitle(figTitle, fontsize=16)
+        plt.title(figSubTitle, fontsize = 12)
+        
+    #Add text
+    if textCount != 'None':
+        ax.text(
+            0.5, 0.8,
+            f"Nr. of interrupted large events: {textCount}",
+            transform=ax.transAxes,
+            fontsize=8,
+            verticalalignment='top')
+        
+    plt.grid()
+    
+def plotScatter(data, axesLabels = None, figTitle = None):
+    fig = plt.figure(figsize=(6, 8))
+    ax = fig.add_subplot(1,1,1)
+    ax.scatter(np.array(range(1, len(data)+1, 1)), data)
+    
+    plt.grid()
+    ax.set_xlabel(axesLabels[0])
+    ax.set_ylabel(axesLabels[1])
+    plt.title(figTitle, fontsize=16)
     
 
 
@@ -289,10 +324,10 @@ def _make_dummy_files(data_dir: Path, n_steps: int, shape: tuple) -> None:
 if __name__ == "__main__":
     #import tempfile
     #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_single"
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/constraining_the_nrn_range/remote_256els/4_4_cut_from_center/lineData"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/Alex_experiment/2_7_boundary_allowed/lineData"
     
 
-    N_STEPS = 63
+    N_STEPS = 32
     SHAPE   = (1001)   # adjust to match your actual array dimensions
 
 
@@ -323,14 +358,16 @@ if __name__ == "__main__":
             
     eventIndsSorted = np.flip(np.argsort(eventMagnitudes))
         
-    histoBins = np.linspace(0, 3.5, 10)
+    histoBins = np.linspace(1, 3.5, 10)
     histoLabels = ["magnitude", "N"]
-    histoTitle = 'Magnitude Distribution'
+    histoTitle = 'Magnitude Histogram'
     plotHistogram(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = histoTitle, figSubTitle = "Timesteps: " + str(SHAPE), textCount = unfinishedCount)
+    plotHistoCum(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = 'Magnitude exceedance curve', figSubTitle = "Timesteps: " + str(SHAPE), textCount = unfinishedCount)
+    plotScatter(eventMagnitudes, ["Event index", "Magnitude"], "Event magnitudes")
     
     #plotProfiles([eventMagnitudes], ["ihypo", "Magnitudes"], "mag")
     
-    selectedRuns = np.array(eventIndsSorted[0:9])+1
+    selectedRuns = np.array(eventIndsSorted[0:5])+1
     selectedStopInds = np.array(eventStopInds)[selectedRuns-1]
     
     # -----------------------------------------------------------
@@ -347,7 +384,7 @@ if __name__ == "__main__":
     # -----------------------------------------------------------
     # 3. Quick access to a pinned step (no disk read)
     # -----------------------------------------------------------
-    printStep = sim[32]
+    printStep = sim[30]
     #printSteps = [sim[86]]
     print("\n--- Single step access ---")
     print(printStep.summary())
@@ -362,7 +399,7 @@ if __name__ == "__main__":
         largestMags.append(currentMag)
         #plotProfiles([currentMag], ["time [dt]", "Magnitude"], "data")
          
-    plotProfiles(largestMags, ["time [dt]", "Magnitude"], selectedRunsStrings, globalTitle = "Magnitude time series of 9 largest events", XLIMS = [0, 1000])
+    plotProfiles(largestMags, ["time [dt]", "Magnitude"], selectedRunsStrings, globalTitle = "Magnitude time series of 5 largest events", XLIMS = [0, 1000])
     
     
     

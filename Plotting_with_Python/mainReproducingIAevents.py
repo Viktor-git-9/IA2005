@@ -43,7 +43,8 @@ def patch_extents(arrays):
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/6_4_event116/")
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_rupTimes")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/constraining_the_nrn_range/remote_256els/4_4_cut_from_center/rupTimes")
+#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/single_asperities/6_1_single/fieldData")
+PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/Alex_experiment/2_7_boundary_allowed/fieldData")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -61,7 +62,7 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "32" # name of selected run
+runName = "8" # name of selected run
 run = runs[runName]
 
 #moment = run.load("moment", scaleIndex)
@@ -72,10 +73,13 @@ run = runs[runName]
 #plotTimeSteps = [10, 50, 100, 192] # for event 806
 #plotTimeSteps = [300, 400, 500] #  for stage 1 nrn
 #plotTimeSteps = [75, 100, 125] # for stage 1 rn
-plotTimeSteps = [1000]
+plotTimeSteps = [160]
 #plotTimeSteps = [10, 500, 750, 1000]
 timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
-cbarLabels2 = ["Rupture times [dt]"] * len(plotTimeSteps)
+cbarLabels_rupTimes = ["Rupture times [dt]"] * len(plotTimeSteps)
+cbarLabels_slipHis = ["Accumulated slip [m]"] * len(plotTimeSteps)
+cbarLabels_slipVelo = ["Slip velo. [m/s]"] * len(plotTimeSteps)
+cbarLabels_stress = ["Stress [MPa]"] * len(plotTimeSteps)
 profileDir2 = "y"
 temp_rupTimes = []
 temp_slipHis = []
@@ -83,22 +87,23 @@ temp_slipVelo = []
 temp_onPlaneStress  = []
 
 for iTime in plotTimeSteps:
-    temp_rupTimes.append(run.load("ruptureTimes", scaleIndex, iTime))
+    #temp_rupTimes.append(run.load("ruptureTimes", scaleIndex, iTime))
     #temp_slipHis.append(run.load("slipHistories", scaleIndex, iTime))
     
     #temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime)[96:160,96:160])
     #temp_slipVelo.append(run.load("slipVelocities", scaleIndex, iTime))
     
     #temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime)[96:160,96:160])
-    #temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime))
+    temp_onPlaneStress.append(run.load("onPlaneStress", scaleIndex, iTime))
+    
     
 rupture_extents = patch_extents(temp_rupTimes)
 print(rupture_extents)
 
-plotContours(temp_rupTimes, timeStepLabels, cbarLabels2, globalTitle="Event 18, Mw = 1.70")
-#plotContours(temp_slipHis, timeStepLabels, ["Slip [m?]"], globalTitle="Acc. Slip")
-#plotContours(temp_slipVelo, timeStepLabels, cbarLabels2, clims=[0, 0.5], globalTitle="Curr. Slip") 
-#plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels2, globalTitle="Onplane Stress for large event at density = 6", clims=[0, 6])
+#plotContours(temp_rupTimes, timeStepLabels, cbarLabels_rupTimes, globalTitle = "Rupture times for large event " + runName)
+#plotContours(temp_slipHis, timeStepLabels, cbarLabels_slipHis, globalTitle="Acc. Slip for large event " + runName)
+#plotContours(temp_slipVelo, timeStepLabels, cbarLabels_slipVelo, clims=[0, 0.1], globalTitle="Slip velo. for large event " + runName) 
+plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels_stress, globalTitle="Onplane Stress for large event " + runName, clims=[0, 6])
 
 ### plot Dc heterogeneity ###
 #heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
