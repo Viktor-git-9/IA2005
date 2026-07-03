@@ -2,8 +2,8 @@ PROGRAM Dcmap_generator
     use makeDCmap
     IMPLICIT NONE
 
-    INTEGER nmax, nscale, nscale2, npower, npower2, ixmax, nhypo, startInd, sectionSize, cutSection
-    REAL(8) ds, dc0, r0, ndense
+    INTEGER nmax, ixmax, nhypo, startInd, sectionSize, cutSection, npower, npower2
+    REAL(8) ds, dc0, r0, ndense, nscale, nscale2
     REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, x0_4_saving, y0_4_saving
     REAL(8), DIMENSION(:, :), ALLOCATABLE :: dcorg, dc_4_saving
     character(len=256) :: filename_hetero, filename_x0, filename_y0, line, key
@@ -83,6 +83,7 @@ PROGRAM Dcmap_generator
     ALLOCATE( x0(nhypo), y0(nhypo) )
 
     call make_fractal_DCmap_II(dcorg, x0, y0, nscale, npower, ndense, ixmax, dc0, r0)
+    !call make_single_asperity_DCmap(dcorg, x0, y0, nscale, npower, ixmax, dc0, r0)
 
     if (cutSection == 1) then ! there is also some trouble with this when setting nmax=64 - 02.04.2026
         write(*,*) "Cutting a section of the full heterogeneity map for saving..."
@@ -101,7 +102,7 @@ PROGRAM Dcmap_generator
     write(*,*) size(dc_4_saving), size(x0_4_saving), size(y0_4_saving)
 
     ! Convert variables to strings
-    write(str_var1, '(G0)') int(ndense*256)
+    write(str_var1, '(G0)') int(ndense*256**2)
     write(str_var2, '(G0)') npower2 + 1
 
     ! Build full filename
