@@ -141,6 +141,8 @@ PROGRAM main
       (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
    write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
 
+   write(*,*) 'Value of p000:', p000
+
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
 !open(12, file=savePath2 // 'p000_val.dat')
