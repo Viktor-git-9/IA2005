@@ -15,7 +15,7 @@ PROGRAM main
 !
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
-   PARAMETER ( nmax = 64, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
+   PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
    PARAMETER ( itmx = 500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
@@ -23,7 +23,7 @@ PROGRAM main
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, & ! moved dcorg here!
       stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, &
       dc_full, dcorg
-   REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, smrate, smoment, allMw
+   REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, rinis, smrate, smoment, allMw
    REAL(8) :: pi, mu, const, facbiem, facfft, &
       tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
       p000, p000_offset, ker31s, ker32s, dtau, dsigma, alpha, &
@@ -120,8 +120,8 @@ PROGRAM main
    ALLOCATE( dcorg(ixmax, ixmax) )
    ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx))
-   ALLOCATE(dc_full(4096,4096)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
-   ALLOCATE(x0(33), y0(33)) ! array for loading the x0/y0 coordinates of hypocenters from filed. Same size as x0 from Hideo&Aochi (2005), 16348x1
+   ALLOCATE(dc_full(256,256)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
+   ALLOCATE(x0(100), y0(100), rinis(100)) ! array for loading the x0/y0 coordinates of hypocenters from files. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
@@ -140,8 +140,6 @@ PROGRAM main
    kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Will fail at midnight :)
       (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
    write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
-
-   write(*,*) 'Value of p000:', p000
 
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
@@ -172,20 +170,25 @@ PROGRAM main
    ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
    ! to avoid loading the same data multiple times.
    ! Renormalization OFF: instead of generating the asperity map, load it from file
-   open(unit=19, file=savePath2 // 'full_hetero_2_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'hetero.bin', form="unformatted", access="stream")
    read(19) dc_full
    close(19)
    write(*,*) "Loaded asperity map from file."
 
-   open(unit=19, file=savePath2 // 'x0_2_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'X0.bin', form="unformatted", access="stream")
    read(19) x0
    close(19)
    write(*,*) "Loaded x0 from file."
 
-   open(unit=19, file=savePath2 // 'y0_2_4.bin', form="unformatted", access="stream")
+   open(unit=19, file=savePath2 // 'Y0.bin', form="unformatted", access="stream")
    read(19) y0
    close(19)
    write(*,*) "Loaded y0 from file."
+
+   open(unit=19, file=savePath2 // 'Rinis.bin', form="unformatted", access="stream")
+   read(19) rinis
+   close(19)
+   write(*,*) "Loaded nucleation radii from file."
 
    isimMax = size(x0)
    write(*,*) "Number of hypocenters to be tested:", isimMax
@@ -206,6 +209,7 @@ PROGRAM main
       ihypo = isim
       write(*,*) "Now testing hypocenter location", ihypo, "out of", isimMax
       write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
+      write(*,*) "Dc value at hypocenter:", dc_full(floor(x0(ihypo)), floor(y0(ihypo)))
 !! test
       !if(isim.eq.0) ihypo = 1
 !! two scenarios of Mw3.8 for Aochi & Burnol (2018)
@@ -245,10 +249,10 @@ PROGRAM main
 
       ! Renormalization OFF: cut appropriate part from the full heterogeneity map depending on hypocenter location and dimensions of the non-renormalization domain.
       ! Not necessary when testing the pre-prepared small het. maps!
-      call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
+      !call cut_from_full_Dc(dc_full, dcorg, x0(ihypo), y0(ihypo), ixmax, ixmax)
 
       ! When testing small het. maps, simply use the section cut from the full map that was loaded before the loop:
-      !dcorg = dc_full
+      dcorg = dc_full
 
       ! write(num, '(i5.5)') ihypo
       ! name6 = dir(1:ndir)//'/output'//num(1:5)//'i.dat'
@@ -280,11 +284,8 @@ PROGRAM main
          vel = 0.0d0 ! vel(i,j,k): slip velocity at every coarse grid-cell and time set to 0
          smrate = 0.0d0 ! smrate(k): moment release rate at every time set to 0
 
-         !call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
-         !   t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rini) ! changed xhypo and yhypo to x0(ihypo) and y0(ihypo)
-
          call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
-            t0, tp0, tr0, ns, ds, rad, nmax, iter, xhypo, yhypo, rini) ! Hypocenters in center of domain: xhypo, yhypo; Hypocenters moving around: x0(ihypo), y0(ihypo)
+            t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rinis(ihypo)) ! Hypocenters in center of domain: xhypo, yhypo; Hypocenters moving around: x0(ihypo), y0(ihypo)
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
@@ -468,8 +469,8 @@ PROGRAM main
          !   endif
 
             !if( k.eq.itmx.or.(iter.ne.npower.and.icheck.eq.1).or.icheck2.eq.0) then ! if maximum iterations are reached, or rupture has reached boundary of current scale, or rupture has died out...
-            !if( k.eq.itmx.or.icheck2.eq.0) then ! Altered end criterion: only stop if max time steps reached or rupture died, allow rupture to reach boundary.
-            if( k.eq.itmx.or.icheck.eq.1.or.icheck2.eq.0) then ! End criterion (***): stopping when rupture reaches boundary at first stage
+            if( k.eq.itmx.or.icheck2.eq.0) then ! Altered end criterion: only stop if max time steps reached or rupture died, allow rupture to reach boundary.
+            !if( k.eq.itmx.or.icheck.eq.1.or.icheck2.eq.0) then ! End criterion (***): stopping when rupture reaches boundary at first stage
                ! write stage results to output files.
 
                ! Convert to physical outputs
@@ -492,8 +493,8 @@ PROGRAM main
                call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
                !call write_real_3DArray_bin(allSlips, savePath1//name98)
                !call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
-               call write_real_2DArray_bin(dc*ns, savePath1//name96)
-               !call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
+               !call write_real_2DArray_bin(dc*ns, savePath1//name96)
+               call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
                !call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
                !name3 = 'moment'//num2(1:1)//'.dat'
@@ -570,14 +571,14 @@ PROGRAM main
             endif
 
             if(k.eq.itmx) then
-               write(6,*) "max iterations reached", iter, k
+               write(6,*) "max. iteration reached", iter, k
                exit STAGE
             endif
 
-            if(icheck.eq.1) then ! Use this in compund with end criterion (***)
-               write(6,*) "rupture reached boundary", iter, k
-               exit STAGE ! Altered end criterion: stopping when rupture reaches boundary of first stage
-            endif
+            !if(icheck.eq.1) then ! Use this in compund with end criterion (***)
+            !   write(6,*) "rupture reached boundary", iter, k
+            !   exit STAGE ! Altered end criterion: stopping when rupture reaches boundary of first stage
+            !endif
 
          enddo TIME
          ! end of time loop.
