@@ -270,7 +270,7 @@ def plotHistogram(data, bins, figLabels = None, figTitle = None, figSubTitle = N
         
     plt.grid()
     
-def plotHistoCum(data, bins, figLabels = None, figTitle = None, figSubTitle = None, textCount = None):
+def plotHistoCum(data, bins, figLabels = None, figTitle = None, figSubTitle = None, bVal = None):
     fig = plt.figure(figsize=(6, 8))
     ax = fig.add_subplot(1,1,1)
     ax.ecdf(data, complementary=True)
@@ -284,15 +284,16 @@ def plotHistoCum(data, bins, figLabels = None, figTitle = None, figSubTitle = No
         plt.title(figSubTitle, fontsize = 12)
         
     #Add text
-    if textCount != 'None':
+    if bVal != 'None':
         ax.text(
             0.5, 0.8,
-            f"Nr. of interrupted large events: {textCount}",
+            f":MLE b-value estimation: {bVal}",
             transform=ax.transAxes,
             fontsize=8,
             verticalalignment='top')
         
     plt.grid()
+    return ax
     
 def plotScatter(data, axesLabels = None, figTitle = None):
     fig = plt.figure(figsize=(6, 8))
@@ -305,6 +306,16 @@ def plotScatter(data, axesLabels = None, figTitle = None):
     plt.title(figTitle, fontsize=16)
     
 
+# ------------------------------------------------------------------
+# MLE estimation
+# ------------------------------------------------------------------
+def MLE_b_value(magnitudes, cutoffMagnitude):
+    MLE_b = np.log10(np.exp(1))/(np.mean(magnitudes) - cutoffMagnitude)
+    MLE_b = MLE_b * (len(magnitudes) - 1)/len(magnitudes) # small sample bias correction
+    MLE_a = np.log10(len(magnitudes)) + MLE_b * cutoffMagnitude # get a from MLE estimation for b
+    
+    return MLE_b, MLE_a
+    
 
 
 # ===========================================================================
@@ -324,11 +335,12 @@ def _make_dummy_files(data_dir: Path, n_steps: int, shape: tuple) -> None:
 if __name__ == "__main__":
     #import tempfile
     #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_single"
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/Alex_experiment/2_7_boundary_allowed/lineData"
+    #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/Alex_experiment/2_7_boundary_allowed/lineData"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/0817/lineData"
     
 
-    N_STEPS = 32
-    SHAPE   = (1001)   # adjust to match your actual array dimensions
+    N_STEPS = 50
+    SHAPE   = (1501)   # adjust to match your actual array dimensions
 
 
     data_dir = Path(data_path)
@@ -357,15 +369,22 @@ if __name__ == "__main__":
             unfinishedCount = unfinishedCount + 1
             
     eventIndsSorted = np.flip(np.argsort(eventMagnitudes))
+    eventMagnitudes = np.array(eventMagnitudes)
         
     histoBins = np.linspace(1, 3.5, 10)
     histoLabels = ["magnitude", "N"]
     histoTitle = 'Magnitude Histogram'
     plotHistogram(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = histoTitle, figSubTitle = "Timesteps: " + str(SHAPE), textCount = unfinishedCount)
-    plotHistoCum(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = 'Magnitude exceedance curve', figSubTitle = "Timesteps: " + str(SHAPE), textCount = unfinishedCount)
     plotScatter(eventMagnitudes, ["Event index", "Magnitude"], "Event magnitudes")
     
-    #plotProfiles([eventMagnitudes], ["ihypo", "Magnitudes"], "mag")
+    m_c = 1.0928
+    MLE_b, MLE_a = MLE_b_value(eventMagnitudes, m_c)
+    
+    GRlaw = lambda m: 10**(-MLE_b*(m-m_c)) # Gutenberg-Richter law
+    
+    ax0 = plotHistoCum(eventMagnitudes, histoBins, figLabels = histoLabels, figTitle = 'Magnitude exceedance curve', figSubTitle = "Timesteps: " + str(SHAPE), bVal = np.round(MLE_b, decimals = 3))
+    ax0.plot(eventMagnitudes, GRlaw(eventMagnitudes))
+    plt.show()
     
     selectedRuns = np.array(eventIndsSorted[0:5])+1
     selectedStopInds = np.array(eventStopInds)[selectedRuns-1]

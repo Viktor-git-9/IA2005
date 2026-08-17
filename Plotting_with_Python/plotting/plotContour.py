@@ -79,7 +79,9 @@ def plotContours(data, titles=None, cbarLabels=None, clims = None, cmap='inferno
     fig.supylabel("y [element counts]")
 
     plt.tight_layout()
-    plt.show()
+    #plt.show()
+    
+    return fig
 
 def plotContour2x2(data1, data2, data3, data4, titles=None, cmap='inferno', globalTitle='none'):
     """

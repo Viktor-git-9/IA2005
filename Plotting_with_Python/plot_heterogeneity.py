@@ -57,15 +57,16 @@ def findBreakableArea(data, backgroundValue):
     
     return breakableArea, areaRatio
 
-datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/small_maps/smoother/"
+#datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/small_maps/smoother/"
+datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/single_asperities/r_148/hetero/"
 #filename2 = "full_hetero.bin"
-filename1 = "hetero_64_11.bin"
-filename3 = "x0_64_11.bin"
-filename4 = "y0_64_11.bin"
+filename1 = "hetero.bin"
+filename3 = "X0.bin"
+filename4 = "Y0.bin"
 #shape1 = [4096, 4096]
 shape1 = [256, 256]
 shape2 = [4096, 4096]
-shape3 = 64
+shape3 = 1
 
 showStop = 255
 #scatterInds = [20, 55, 58, 97, 80, 23, 78, 115, 52]
@@ -73,7 +74,7 @@ showStop = 255
 #scatterInds = np.array([18, 27, 8, 23, 52, 6, 13, 44, 53])-1 # 4_4
 #scatterInds = np.array([62, 13, 69, 15, 61, 23, 2, 33, 95])-1 # 6_4
 #scatterInds = np.array([14, 18, 16, 2, 6, 27, 5, 9, 23])-1 # 2_4
-scatterInds = np.array(range(0, 64, 1))
+scatterInds = np.array(range(0, 100, 1))
 
 #hetero_renorm_off = [loadBinArray(datapath + filename1, shape1)[96:160,96:160]]
 hetero_renorm_off = [loadBinArray(datapath + filename1, shape1)[0:showStop, 0:showStop]]
@@ -85,7 +86,8 @@ y0  = [loadBinArray(datapath + filename4, shape3)]
 
 breakableArea, areaRatio = findBreakableArea(np.array(hetero_renorm_off), 1000)
 
-fig1 = plotContours(hetero_renorm_off, clims=[0.25, 2.2], cbarLabels=["Dc [mm]"], titles=["n_hypo = 64, Species = 4"], globalTitle="Dc Map")
+#hetero_renorm_off[0] = np.transpose(hetero_renorm_off[0])
+fig1 = plotContours(hetero_renorm_off, clims=[0.25, 3], cbarLabels=["Dc [mm]"], titles=["n_hypo = 100, Species = 4"], globalTitle="Dc Map")
 ax1 = fig1.axes[0]
 for i in scatterInds:
     #print(i)

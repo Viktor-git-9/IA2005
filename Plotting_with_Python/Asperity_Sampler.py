@@ -79,12 +79,13 @@ def findBreakableArea(data, backgroundValue):
     return breakableArea, areaRatio
 
 # %%
-a = 1.7
+a = 1.5
 b = 1
 delta_sigma = 3*1e6
 K = 10**(a + 2*b/3*(9.1 - np.log10(16/7*delta_sigma)))
-#rmin = K**(1/(2*b))
-rmin = 4
+#K = 3000
+rmin = K**(1/(2*b))
+#rmin = 4
 
 GRlaw = lambda M: 10**a * 10**(-b*M)
 pdf = lambda r: 2*b*K * r**(-2*b-1)
@@ -101,17 +102,22 @@ cdf_vals = 1 - ccdf(r)
 
 mapCount = 10
 areaRatios = []
+bVals = []
 
-for iMap in range(1, mapCount):
+for iMap in range(0, mapCount):
     
     u = np.random.rand(int(10**a))      # Uniform(0,1)
     r_samples = cdf_inverse(u)
 
     artificial_moments = 16/7 * delta_sigma * r_samples**3
     artificial_magnitudes = moment2mag(artificial_moments)
+    artificial_magnitudes_sorted = np.sort(artificial_magnitudes)[::-1]
+    logOfCounts = np.log10(np.arange(1, len(artificial_magnitudes_sorted)+1))
+    artificial_b, artificial_lna = np.polyfit(artificial_magnitudes_sorted, logOfCounts, 1)
+    bVals.append(artificial_b)
     
     radii = r_samples/4
-    radii[radii>100] = 90 # artificially get rid of too large asperities. Gotta fix this by introducing a rmax!
+    radii[radii>100] = 100 # artificially get rid of too large asperities. Gotta fix this by introducing a rmax!
     ixmax = 256
     DcVals = 0.1*radii
     
@@ -120,6 +126,8 @@ for iMap in range(1, mapCount):
     
     areaRatios.append(areaRatio)
 
+artificialbMean = np.mean(bVals)
+artificialbVar = np.var(bVals)
 coverageMean = np.mean(areaRatios)
 coverageVar  = np.var(areaRatios)
 
@@ -147,6 +155,10 @@ histoTitle = 'Magnitude Histogram'
 fig4, ax4 = plt.subplots()
 ax4.scatter(np.arange(int(10**a)), artificial_magnitudes)
 ax4.set_title("Magnitudes")
+
+fig5, ax5 = plt.subplots()
+ax5.scatter(artificial_magnitudes_sorted, logOfCounts)
+ax5.set_title("Scatter plot of magnitude exceedance")
 
 ax0 = plotHistoCum(artificial_magnitudes, histoBins, figLabels = histoLabels, figTitle = 'Test: Magnitude exceedance curve \n from radii')
 ax0.plot(histo_mags, GRlaw(histo_mags))
