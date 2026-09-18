@@ -287,7 +287,7 @@ def plotHistoCum(data, bins, figLabels = None, figTitle = None, figSubTitle = No
     if bVal != 'None':
         ax.text(
             0.5, 0.8,
-            f":MLE b-value estimation: {bVal}",
+            f"MLE b-value estimation: {bVal}",
             transform=ax.transAxes,
             fontsize=8,
             verticalalignment='top')
@@ -336,10 +336,10 @@ if __name__ == "__main__":
     #import tempfile
     #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_single"
     #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/Alex_experiment/2_7_boundary_allowed/lineData"
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/0817/lineData"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/data_19/19/lineData"
     
 
-    N_STEPS = 50
+    N_STEPS = 15
     SHAPE   = (1501)   # adjust to match your actual array dimensions
 
 
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     # -----------------------------------------------------------
     # 3. Quick access to a pinned step (no disk read)
     # -----------------------------------------------------------
-    printStep = sim[30]
+    printStep = sim[1]
     #printSteps = [sim[86]]
     print("\n--- Single step access ---")
     print(printStep.summary())

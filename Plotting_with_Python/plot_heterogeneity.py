@@ -58,15 +58,18 @@ def findBreakableArea(data, backgroundValue):
     return breakableArea, areaRatio
 
 #datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/small_maps/smoother/"
-datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/single_asperities/r_148/hetero/"
+#datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/small_maps/"
+#datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/single_asperities/r_148/hetero/"
+datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_5/4/info/"
 #filename2 = "full_hetero.bin"
 filename1 = "hetero.bin"
 filename3 = "X0.bin"
 filename4 = "Y0.bin"
+filename5 = "Rinis.bin"
 #shape1 = [4096, 4096]
 shape1 = [256, 256]
 shape2 = [4096, 4096]
-shape3 = 1
+shape3 = 5
 
 showStop = 255
 #scatterInds = [20, 55, 58, 97, 80, 23, 78, 115, 52]
@@ -83,16 +86,18 @@ x0  = [loadBinArray(datapath + filename3, shape3)]
 #x0[0] = x0[0] - 1920 # shift to center of full DcMap
 y0  = [loadBinArray(datapath + filename4, shape3)]
 #y0[0] = y0[0] - 1920
+Rini = [loadBinArray(datapath + filename5, shape3)]
 
 breakableArea, areaRatio = findBreakableArea(np.array(hetero_renorm_off), 1000)
+print(areaRatio)
 
 #hetero_renorm_off[0] = np.transpose(hetero_renorm_off[0])
-fig1 = plotContours(hetero_renorm_off, clims=[0.25, 3], cbarLabels=["Dc [mm]"], titles=["n_hypo = 100, Species = 4"], globalTitle="Dc Map")
+fig1 = plotContours(hetero_renorm_off, clims=[0.25, 3], cbarLabels=["Dc [mm]"], titles=[f"Asperity count = {shape3}, cover ratio = {np.round(areaRatio,3)}"], globalTitle="Dc Map")
 ax1 = fig1.axes[0]
-for i in scatterInds:
+#for i in scatterInds:
     #print(i)
-    ax1.scatter(x0[0][i], y0[0][i], color='red', s=5, zorder=100)
-    ax1.text(x0[0][i]*(1+0.01), y0[0][i]*(1+0.01), str(i+1), color='red')
+#    ax1.scatter(x0[0][i], y0[0][i], color='red', s=5, zorder=100)
+#    ax1.text(x0[0][i]*(1+0.01), y0[0][i]*(1+0.01), str(i+1), color='red')
 plt.show()
 
 # fig2 = plotContours(full_hetero, clims=[0,4], cbarLabels=["Dc [mm]"], titles=["Dc heterogeneity"], globalTitle="Renormalization ON")
@@ -100,6 +105,6 @@ plt.show()
 # #ax2.scatter(shape2[0]/2, shape2[1]/2, color='red', s=20, zorder=100)
 # plt.show()
 
-print(np.min(x0))
-print(np.max(x0))
+#print(np.min(x0))
+#print(np.max(x0))
 
