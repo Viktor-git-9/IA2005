@@ -3,7 +3,7 @@
 #SBATCH --partition=geo4dgpu
 #SBATCH --gres=gpu:1
 #SBATCH --mem=12G
-#SBATCH --time=04:00:00
+#SBATCH --time=08:00:00
 #SBATCH --output=logs/slurm_master.out
 
 module load nvhpc-hpcx-cuda12/25.3   # module loading for nvhpc
@@ -18,7 +18,7 @@ for case_dir in heterogeneity/*/; do
   mkdir -p "$outdir"
 
   echo "Starting simulation run '$case_name'"
-  "$EXEC" "$case_dir" "$outdir/" > "logs/${case_name}.log" 2>&1
+  "$EXEC" "$case_dir" "$outdir/" > >(tee "logs/${case_name}.log") 2>&1
 
   if [ $? -ne 0 ]; then
     echo "  FAILED — see logs/${case_name}.log"

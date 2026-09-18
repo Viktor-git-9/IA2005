@@ -16,14 +16,15 @@ PROGRAM main
    INTEGER nmax, ndata1, ndata2
    INTEGER npower, nscale, ixmax, itmx
    PARAMETER ( nmax = 256, nscale = 1, npower = 0, ixmax = nmax*nscale**npower ) ! nscale was 4, npower was 3
-   PARAMETER ( itmx = 500 )
+   PARAMETER ( itmx = 1500 )
    PARAMETER ( ndata1 = 2*nmax, ndata2 = 2*nmax ) ! why 4*nmax? to avoid aliasing in FFT?
    REAL(8), DIMENSION(:, :, :), ALLOCATABLE :: vel, vel2, &
-      allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses ! I made some new book-keeping arrays, to be written and exported to python
+      allRuptureTimes, allSlips, allOnplaneStresses, allOffplaneStresses, startEndFieldData1, &
+     startEndFieldData2, startEndFieldData3, startEndFieldData4 ! I made some new book-keeping arrays, to be written and exported to python
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, & ! moved dcorg here!
       stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, &
       dc_full, dcorg
-   REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, rinis, smrate, smoment, allMw
+   REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, rinis, smrate, smoment, allMw, eventMagnitudes
    REAL(8) :: pi, mu, const, facbiem, facfft, &
       tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
       p000, p000_offset, ker31s, ker32s, dtau, dsigma, alpha, &
@@ -37,7 +38,7 @@ PROGRAM main
       kmin, iter, kmax, itmx1, icheck, icheck2, it, &
       ndense, nasp, idum, iscale, ihypo, isim, isim0, nhypo, &
       nmax2, ns, i0, j0, i1, j1, k1, nscale2, npower2, diffTime, &
-      kernelDiffTime, isimMax
+      kernelDiffTime, isimMax, nargs, asperityCount
    INTEGER :: ndata(2)
    INTEGER, DIMENSION(8) :: startTime, endTime, kernelStartTime, kernelEndTime
    complex(kind=kind(0d0)), allocatable :: &
@@ -47,16 +48,22 @@ PROGRAM main
    complex(4), allocatable :: zker(:,:)
    complex(4), allocatable :: zvel(:,:)
    EXTERNAL ker31s, ker32s, ran1
-   ! CHARACTER(*), PARAMETER :: savePath1 = '/home/essbach/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
-   ! CHARACTER(*), PARAMETER :: savePath2 = '/home/essbach/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
-   CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
-   CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
+   !CHARACTER(*), PARAMETER :: savePath1 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/output/' ! use this save path for the model output
+   !CHARACTER(*), PARAMETER :: savePath2 = '/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Numerics_with_Fortran/heterogeneity/' ! use this save path to store and load the Green's function kernel files once they are calculated
    CHARACTER*40 name2, name3, name4, name5, name6, name7, name8, name9, &
       name94, name95, name96, name97, name98, name99, dir, param_file, &
       name93, name92, name91, name90, name100
    CHARACTER*5  num, num2
    CHARACTER(len=50)  :: isimString, timeStepString
-   CHARACTER(len=256) :: filenameMoment, filenameMomentrate, filenameMagnitude
+   CHARACTER(len=256) :: inputPath, outputPath
+   CHARACTER(len=256) :: filenameMoment, filenameMomentrate, filenameMagnitude, filenameAllMagnitudes, & 
+      filenameHetero, filenameX0, filenameY0, filenameRinis
+
+  nargs = command_argument_count()
+  if (nargs < 2) then
+    print *, "Usage: ./simulation <input_dir> <output_dir>"
+    stop 1
+  end if
 
 ! Say hello by printing system time
    call date_and_time(VALUES=startTime)
@@ -111,7 +118,9 @@ PROGRAM main
 ! Allocations
    ALLOCATE( vel(nmax, nmax, 0:itmx), vel2(nmax, nmax, 0:itmx), &
       allRuptureTimes(nmax, nmax, 0:itmx), allSlips(nmax, nmax, 0:itmx), &
-      allOnplaneStresses(nmax, nmax, 0:itmx), allOffplaneStresses(nmax, nmax, 0:itmx) )
+      allOnplaneStresses(nmax, nmax, 0:itmx), allOffplaneStresses(nmax, nmax, 0:itmx), &
+      startEndFieldData1(nmax, nmax, 2), startEndFieldData2(nmax, nmax, 2), startEndFieldData3(nmax, nmax, 2), &
+      startEndFieldData4(nmax, nmax, 2))
    ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
       stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
       sigma(nmax, nmax),      w(nmax, nmax), &
@@ -121,8 +130,37 @@ PROGRAM main
    ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
    ALLOCATE(zvel(ndata1*ndata2, itmx), zker(ndata1*ndata2, itmx))
    ALLOCATE(dc_full(256,256)) ! array for loading the asperity map from file. Same size as dcorg from Hideo&Aochi (2005), 4096x4096
-   ALLOCATE(x0(100), y0(100), rinis(100)) ! array for loading the x0/y0 coordinates of hypocenters from files. Same size as x0 from Hideo&Aochi (2005), 16348x1
+   !ALLOCATE(x0(1), y0(1), rinis(1)) ! array for loading the x0/y0 coordinates of hypocenters from files. Same size as x0 from Hideo&Aochi (2005), 16348x1
 
+! READ FROM INPUT FILE
+
+   call get_command_argument(1, inputPath)
+   call get_command_argument(2, outputPath)
+
+   ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
+   ! to avoid loading the same data multiple times.
+   ! Renormalization OFF: instead of generating the asperity map, load it from file
+   filenameHetero = trim(inputPath)//"/hetero.bin"
+   filenameX0 = trim(inputPath)//"/X0.bin"
+   filenameY0 = trim(inputPath)//"/Y0.bin"
+   filenameRinis = trim(inputPath)//"/Rinis.bin"
+
+   open(unit=19, file=trim(inputPath) // 'asperityCount.txt', status="old", action="read")
+   read(19, *) asperityCount
+   close(19)
+   write(*,*) "Loaded asperity count from file."
+
+   open(unit=19, file=filenameHetero, form="unformatted", access="stream")
+   read(19) dc_full
+   close(19)
+   write(*,*) "Loaded asperity map from file."
+
+   call read_vector_checked(filenameX0, x0, asperityCount)
+   write(*,*) "Loaded x0 from file."
+   call read_vector_checked(filenameY0, y0, asperityCount)
+   write(*,*) "Loaded y0 from file."
+   call read_vector_checked(filenameRinis, rinis, asperityCount)
+   write(*,*) "Loaded rinis from file."
 
    ns = ixmax/256 ! this probably needs adjusting when I change nmax, nscale, npower.
    if(ns.lt.1) ns = 1
@@ -133,13 +171,8 @@ PROGRAM main
    write(*,'("Estimated kernel size: ", F8.3, " GB")') kernelMemoryEstimate ! rough estimate of memory used by kernel
    offset = 5.d0 ! z-coordinate of off-plane measurement plane
    call date_and_time(VALUES=kernelStartTime)
-   call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
+   !call get_resp(p000, zker, itmx, ndata1, ndata2, nmax, 0.d0, facbiem, 31) ! get onplane kernel for shear stress
    !call get_resp(p000_offset, zker_offset, itmx, ndata1, ndata2, nmax, offset, facbiem, 31) ! get offplane kernel for shear stress at z = offset
-   call date_and_time(VALUES=kernelEndTime)
-
-   kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Will fail at midnight :)
-      (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
-   write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
 
 ! Writing on-plane Green's function Kernel to file to allow loading it from file instead of recalculating every time
 ! This can be commented out once the Kernel has been generated and saved.
@@ -151,13 +184,20 @@ PROGRAM main
 ! write(*,*) 'Made it here :)'
 
 ! Loading p000 and the Kernel from their respective files
-!open(12, file=savePath2 // 'p000_val.dat', status="old")
-!read(12,*) p000
-!close(12)
+write(*,*) 'Loading pre-saved kernel from file...'
+open(12, file="kernel/" // 'p000_val.dat', status="old")
+read(12,*) p000
+close(12)
 
-!open(unit=19, file=savePath2 // 'zker.bin', form="unformatted", access="stream")
-!read(19) zker
-!close(19)
+open(unit=19, file="kernel/" // 'zker.bin', form="unformatted", access="stream")
+read(19) zker
+close(19)
+
+call date_and_time(VALUES=kernelEndTime)
+
+kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime(7) - & ! Will fail at midnight :)
+      (kernelStartTime(5)*3600 + kernelStartTime(6)*60 + kernelStartTime(7)))
+   write(*,*) 'Kernel time:', kernelDiffTime, 'seconds.'
 
    name2 = dir(1:ndir)//'/hoge2.dat'
    open(12, file=name2)
@@ -167,32 +207,11 @@ PROGRAM main
    write(12, '(4i10)') ndense, nscale2, npower2, nhypo
    close(12)
 
-   ! For testing many hypocenters: load het. map and hypocenter coordinates before loop
-   ! to avoid loading the same data multiple times.
-   ! Renormalization OFF: instead of generating the asperity map, load it from file
-   open(unit=19, file=savePath2 // 'hetero.bin', form="unformatted", access="stream")
-   read(19) dc_full
-   close(19)
-   write(*,*) "Loaded asperity map from file."
-
-   open(unit=19, file=savePath2 // 'X0.bin', form="unformatted", access="stream")
-   read(19) x0
-   close(19)
-   write(*,*) "Loaded x0 from file."
-
-   open(unit=19, file=savePath2 // 'Y0.bin', form="unformatted", access="stream")
-   read(19) y0
-   close(19)
-   write(*,*) "Loaded y0 from file."
-
-   open(unit=19, file=savePath2 // 'Rinis.bin', form="unformatted", access="stream")
-   read(19) rinis
-   close(19)
-   write(*,*) "Loaded nucleation radii from file."
-
-   isimMax = size(x0)
+   isimMax = asperityCount
    write(*,*) "Number of hypocenters to be tested:", isimMax
 
+   allocate(eventMagnitudes(0:isimMax))
+   eventMagnitudes = 0
    !dc_full = transpose(dc_full)
    !write(*,*) "Transposed asperity map."
 
@@ -204,11 +223,12 @@ PROGRAM main
    write(*,*) "Starting hypocenter loop, copying to GPU..."
    !$acc data copyin(zker, zvel) copy(zans)
    !do isim = isim0, isim0
+   !do isim = 1, isimMax
    do isim = 1, isimMax
-   !do isim = 1, 1
       ihypo = isim
       write(*,*) "Now testing hypocenter location", ihypo, "out of", isimMax
       write(*,*) "Hypocenter location (x,y):", x0(ihypo), y0(ihypo)
+      write(*,*) "Nucleation radius:", rinis(ihypo)
       write(*,*) "Dc value at hypocenter:", dc_full(floor(x0(ihypo)), floor(y0(ihypo)))
 !! test
       !if(isim.eq.0) ihypo = 1
@@ -450,6 +470,12 @@ PROGRAM main
             allSlips(:,:,k) = w
             allOffplaneStresses(:,:,k) = 0 ! should be dtau_offset, set 0 for the moment as offplane stress calculation is disabled
             allOnplaneStresses(:,:,k)  = stress
+            if(k.eq.1) then
+                    startEndFieldData1(:,:,1) = stress
+                    startEndFieldData2(:,:,1) = irup
+                    startEndFieldData3(:,:,1) = w
+                    startEndFieldData4(:,:,1) = vel(:,:,k)*alpha
+            endif
             !write(*,*) "Stress at selected element: ", k, stress(50, 32), dtau, dsigma
             !write(*,*) "Data saved for time step ", k
 
@@ -473,9 +499,15 @@ PROGRAM main
             !if( k.eq.itmx.or.icheck.eq.1.or.icheck2.eq.0) then ! End criterion (***): stopping when rupture reaches boundary at first stage
                ! write stage results to output files.
 
+               ! Fill book-keeping array with final state of field data
+               startEndFieldData1(:,:,2) = stress
+               startEndFieldData2(:,:,2) = irup
+               startEndFieldData3(:,:,2) = w
+               startEndFieldData4(:,:,2) = vel(:,:,k)*alpha
+               
                ! Convert to physical outputs
                coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
-               dsreal = 4.d0*ns*ds 
+               dsreal = 4.d0*ns*ds
                dtreal = dsreal/(2.*alpha*1000.)
 
                ! get file tags ready
@@ -490,11 +522,15 @@ PROGRAM main
                name96  = 'heterogeneity'//num2(1:1)// '_' // trim(isimString) // '.bin'
                name94  = 'onPlaneStress'//num2(1:1)// '_' // trim(isimString) // '.bin'
                name100 = 'slipVelocities'//num2(1:1)// '_' // trim(isimString) // '.bin'
-               call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
+               !call write_real_3DArray_bin(allRuptureTimes, savePath1//name99)
                !call write_real_3DArray_bin(allSlips, savePath1//name98)
                !call write_real_3DArray_bin(allOffplaneStresses, savePath1//name97)
                !call write_real_2DArray_bin(dc*ns, savePath1//name96)
-               call write_real_3DArray_bin(allOnplaneStresses, savePath1//name94)
+
+               call write_real_3DArray_bin(startEndFieldData1, trim(outputPath)//name94) !save stress
+               call write_real_3DArray_bin(startEndFieldData2, trim(outputPath)//name99) !save rupture times
+               call write_real_3DArray_bin(startEndFieldData3, trim(outputPath)//name98) !save slip histories
+               call write_real_3DArray_bin(startEndFieldData4, trim(outputPath)//name100) !save slip velocities
                !call write_real_3DArray_bin(vel*alpha, savePath1//name100) ! multiply slip velos with alpha to get proper units
 
                !name3 = 'moment'//num2(1:1)//'.dat'
@@ -513,17 +549,19 @@ PROGRAM main
                !call write_real_1DArray(allMw, savePath1//'magnitude'//num2(1:1)//'.dat', '(i5, 1x, ES25.16)')
 
                ! Prepare filenames
-               filenameMoment = savePath1 // 'moment_' // trim(isimString) // '.bin'
-               filenameMomentrate = savePath1 // 'momentRate_' // trim(isimString) // '.bin'
-               filenameMagnitude = savePath1 // 'magnitude_' // trim(isimString) // '.bin'
+               filenameMoment = trim(outputPath) // 'moment_' // trim(isimString) // '.bin'
+               filenameMomentrate = trim(outputPath) // 'momentRate_' // trim(isimString) // '.bin'
+               filenameMagnitude = trim(outputPath) // 'magnitude_' // trim(isimString) // '.bin'
 
                !call write_real_1DArray_bin(smoment, filenameMoment)
                !call write_real_1DArray_bin(smrate, filenameMomentrate)
                !call write_real_1DArray_bin(allMw, filenameMagnitude)
 
-               call write_real_1DArray_bin(smoment*dtreal*dsreal**2*mu*10.0**9, filenameMoment)
-               call write_real_1DArray_bin(smrate*dtreal*dsreal**2*mu*10.0**9, filenameMomentrate)
-               call write_real_1DArray_bin(allMw, filenameMagnitude)
+               call write_real_1DArray_bin(smoment*coef, filenameMoment)
+               call write_real_1DArray_bin(smrate*dsreal**2*mu*10.0**9, filenameMomentrate)
+               call write_real_1DArray_bin((log10(smoment*coef)-9.1)/1.5, filenameMagnitude)
+
+               eventMagnitudes(ihypo) = allMw(k)
 
 !                name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
 !                open(13, file=name3)
@@ -591,6 +629,9 @@ PROGRAM main
    ! End of hypocenter loop and parallelization data region.
    !$acc end data
 
+   filenameAllMagnitudes = trim(outputPath) // 'eventMagnitudes' // '.txt'
+   call write_real_1DArray(eventMagnitudes, filenameAllMagnitudes, "(i5, 1x, f15.6)")
+
 99 continue
    write(*,*) "END OF SIMULATION"
 
@@ -601,7 +642,7 @@ PROGRAM main
    write(*,*) 'Total time:', diffTime, 'seconds.'
 
    name95 = 'params4python.dat'
-   open(22, file=savePath1//name95)
+   open(22, file=trim(outputPath)//name95)
    write(22, '(1i5)')  nmax
    write(22, '(1i5)')  nmax
    write(22, '(1i5)')  itmx+1
@@ -609,6 +650,30 @@ PROGRAM main
    write(22, '(1i5)') diffTime
    write(22, '(1i5)') kernelDiffTime
    close(22)
+
+contains
+
+   subroutine read_vector_checked(fname, vec, vecsize)
+      character(len=*), intent(in) :: fname
+      integer, intent(in) :: vecsize
+      real(8), allocatable, intent(out) :: vec(:)
+      integer :: u
+      integer(8) :: fsize
+
+      inquire(file=trim(fname), size=fsize)
+      if (fsize /= int(vecsize, 8) * 8_8) then
+         print *, "ERROR: size mismatch in ", trim(fname)
+         print *, "dims.txt says ", vecsize, " elements (", int(n,8)*8_8, " bytes)"
+         print *, "but file actually has ", fsize, " bytes"
+         stop 1
+      end if
+
+      allocate(vec(vecsize))
+      open(newunit=u, file=trim(fname), form='unformatted', &
+            access='stream', status='old')
+      read(u) vec
+      close(u)
+   end subroutine read_vector_checked
 
 END
 
