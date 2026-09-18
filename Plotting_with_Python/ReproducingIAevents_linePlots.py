@@ -9,7 +9,8 @@ from plotting.plotProfiles import getProfiles, plotProfiles, plot2Profiles
 from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/537/")
+#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/537")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_1/corrected_moment_2/data/fieldData")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -27,17 +28,21 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 stageChangeInd = None # index of move from stage 0 to stage 1
-scaleIndex1 = 1
+scaleIndex1 = 0
 scaleIndex2 = 0
-cutOffInd1 = 30
-cutOffInd2 = 30
-runName1 = "renorm_off" # names of selected runs
-runName2 = "renorm_on"
+cutOffInd1 = 500
+cutOffInd2 = 500
+runName1 = "1" # names of selected runs
+runName2 = "1"
 correctionFactor = 1
-plotTitle = "Event 537, Stage 1"
+plotTitle = "Compare rinis"
 
 run_on = runs[runName1]
 run_off = runs[runName2]
+
+lineLabels = ["rini = 2/3", "rini = 3/4"]
+xlabel1 = "time step"
+xlabel2 = ""
 
 moment_on = run_on.load("moment", scaleIndex1)[0:cutOffInd1]
 momentRate_on = run_on.load("momentRate", scaleIndex1)[0:cutOffInd1]
@@ -48,13 +53,13 @@ momentRate_off = run_off.load("momentRate", scaleIndex2)[0:cutOffInd2]
 magnitude_off = run_off.load("magnitude", scaleIndex2)[0:cutOffInd2]
 
 ### Plot moment, moment rate, magnitude ###
-plot2Profiles([moment_on, moment_off*correctionFactor], xlabel_bottom="time step (rn on)", xlabel_top="time step (rn off)",
-                    ylabel="Moment [N m]", title=plotTitle, labels=["rn on", "rn off"], lineInd=stageChangeInd)
+plot2Profiles([moment_on, moment_off*correctionFactor], xlabel_bottom=xlabel1, xlabel_top=xlabel2,
+                    ylabel="Moment [N m]", title=plotTitle, labels=lineLabels, lineInd=stageChangeInd)
 
-plot2Profiles([momentRate_on, momentRate_off*correctionFactor], xlabel_bottom="time step (rn on)", xlabel_top="time step (rn off)",
-                    ylabel="Moment Rate [N m / s]", title=plotTitle, labels=["rn on", "rn off"], lineInd=stageChangeInd)
+plot2Profiles([momentRate_on, momentRate_off*correctionFactor], xlabel_bottom=xlabel1, xlabel_top=xlabel2,
+                    ylabel="Moment Rate [N m / s]", title=plotTitle, labels=lineLabels, lineInd=stageChangeInd)
 
-plot2Profiles([magnitude_on, magnitude_off], xlabel_bottom="time step (rn on)", xlabel_top="time step (rn off)",
-                    ylabel="Magnitude", title=plotTitle, labels=["rn on", "rn off"], lineInd=stageChangeInd)
+plot2Profiles([magnitude_on, magnitude_off], xlabel_bottom=xlabel1, xlabel_top=xlabel2,
+                    ylabel="Magnitude", title=plotTitle, labels=lineLabels, lineInd=stageChangeInd)
 
 
