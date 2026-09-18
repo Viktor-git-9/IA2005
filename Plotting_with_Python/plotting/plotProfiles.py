@@ -117,7 +117,7 @@ def plotProfiles(data, axesLabels, lineLabels, globalTitle=None, stretchFactor=N
         xvals = np.linspace(1, N, N)
     
     for profile, linelabel in zip(data, lineLabels):              
-        ax.plot(xvals, profile, label=linelabel, linewidth=3)
+        ax.plot(xvals, profile, label=linelabel, linewidth=4)
         
     if lineInd:
         plt.axvline(lineInd)

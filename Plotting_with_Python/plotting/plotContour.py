@@ -7,7 +7,9 @@ Created on Fri Dec 12 11:08:19 2025
 """
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Annulus
 from matplotlib.gridspec import GridSpec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def plotContours(data, titles=None, cbarLabels=None, clims = None, cmap='inferno', globalTitle='none'):
     """
@@ -66,7 +68,12 @@ def plotContours(data, titles=None, cbarLabels=None, clims = None, cmap='inferno
             im = ax.imshow(arr.T, cmap=cmap, origin='lower')
         ax.set_aspect('equal')      # <- enforces square axes
         ax.set_title(title)
-        cbar = plt.colorbar(im, ax=ax)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cbar = fig.colorbar(im, cax=cax, format='%.0e')
+        
+        annulus = Annulus((170.79, 156.34), r=48, width=2, color='c', linestyle = '-.')
+        #ax.add_patch(annulus)
         
         if cbarLabels is not None:
             cbar.set_label(cbarLabel)
