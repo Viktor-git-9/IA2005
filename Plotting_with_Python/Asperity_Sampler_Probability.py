@@ -9,8 +9,10 @@ Created on Wed Jul  1 16:32:52 2026
 
 import numpy as np
 import matplotlib.pyplot as plt
+plt.ioff() # turn off interactive plotting
 import numpy.random as rand
 from plotting.plotContour import plotContours # import plotting functions
+import os
 
 # %% Define functions to build asperity map and make a cumulative plot
 
@@ -27,10 +29,12 @@ def createAsperity(DcMap, asperityDc, asperityRadius, asperityLocation):
     
 
 # create an asperity map by placing many asperities on a grid. No cuts at the boundaries allowed
-def DcMapGenerator(ixmax, DcVals, radii):    
-    DcMap = np.zeros((ixmax, ixmax)) + 1000
+def DcMapGenerator(ixmax, DcVals, radii, coverRatioLimit):
+    backgroundVal = 1000
+    DcMap = np.zeros((ixmax, ixmax)) + backgroundVal # fill with background value
     X0    = []
     Y0    = []
+    ratioReached = 0
     radii = np.sort(radii)[::-1]
     DcVals = np.sort(DcVals)[::-1]
     
@@ -48,10 +52,16 @@ def DcMapGenerator(ixmax, DcVals, radii):
                 check = 1
                 X0.append(proposedLocation[0])
                 Y0.append(proposedLocation[1])
+                
+        coverInfo = findBreakableArea(DcMap, backgroundVal)
+        if coverInfo[1] >= coverRatioLimit:
+            ratioReached = 1
+            break
+        
             
     X0 = np.array(X0)
     Y0 = np.array(Y0)
-    return DcMap, X0, Y0
+    return DcMap, X0, Y0, ratioReached, irad
         
 
 # make a cumulative loglog plot of some data
@@ -89,13 +99,21 @@ def findBreakableArea(data, backgroundValue):
     
     return breakableArea, areaRatio
 
+# calculate MLE estimation for the b-value
+def MLE_b_value(magnitudes, cutoffMagnitude):
+    MLE_b = np.log10(np.exp(1))/(np.mean(magnitudes) - cutoffMagnitude)
+    MLE_b = MLE_b * (len(magnitudes) - 1)/len(magnitudes) # small sample bias correction
+    MLE_a = np.log10(len(magnitudes)) + MLE_b * cutoffMagnitude # get a from MLE estimation for b
+    
+    return MLE_b, MLE_a
+
 # %% Setup constants and functions
 
-asperityCount = 50 # how many asperities are to be placed
+savePath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/savedDcMaps/"
+asperityCount = 45 # how many asperities are to be placed
 b = 1.5 # b-value of underlying magnitude distribution. To be recovered by the samples!
 r_c = 20 # minimum asperity radius in meter (default 20m). Divide by 4 to get element count
 delta_sigma = 3*1e6 # stress drop, for conversion from radius to magnitude and back
-doSave = True
 
 moment2mag  = lambda M: (np.log10(M) - 9.1) / 1.5 # https://gfzpublic.gfz.de/pubman/faces/ViewItemOverviewPage.jsp?itemId=item_4015
 rad2moment  = lambda r: 16/7 * delta_sigma * r**3 # Madariaga&Ruiz (2016)
@@ -117,10 +135,15 @@ magnitudes = moment2mag(rad2moment(r)) # magnitudes from these radii
 
 # %% Draw samples, make maps
 
-mapCount = 10 # how many samples / maps
+doSave = True
+mapCount = 10 # how many samples = maps
+coverRatioLimit = 1 # target cover ratio
 areaRatios = [] # prepare some lists
+ratioReached = []
+countsReached = []
 bVals = []
 aVals = []
+allArtificialMagnitudes = np.empty([asperityCount, mapCount])
 
 # loop over all samples
 for iMap in range(0, mapCount):
@@ -139,37 +162,56 @@ for iMap in range(0, mapCount):
     artificial_magnitudes_sorted = np.sort(artificial_magnitudes)[::-1] # sort magnitudes, for plotting
     logOfCounts = np.log10(np.arange(1, len(artificial_magnitudes_sorted)+1))
     #artificial_b, artificial_a = np.polyfit(artificial_magnitudes_sorted, logOfCounts, 1)
+    allArtificialMagnitudes[:,iMap] = artificial_magnitudes
     
-    MLE_artificial_b = np.log10(np.exp(1))/(np.mean(artificial_magnitudes) - m_c) # do MLE estimation on magnitude sample to recover b
-    MLE_artificial_b = MLE_artificial_b * (asperityCount - 1)/asperityCount # small sample bias correction
-    MLE_artificial_a = np.log10(asperityCount) + MLE_artificial_b * m_c # get a from MLE estimation for b
+    MLE_estimation = MLE_b_value(artificial_magnitudes, m_c)
+    MLE_artificial_b = MLE_estimation[0]
+    MLE_artificial_a = MLE_estimation[1]
     bVals.append(MLE_artificial_b)
     aVals.append(MLE_artificial_a)
         
     ixmax = 256
     DcVals = 0.05*radii/4 # calculate values for asperities, linear dependance
-    Rinis = np.sort(2/3*radii/4)[::-1] # save nucleation radii with linear dependance on asperity rad.
+    Rinis = np.sort(0.67*radii/4)[::-1] # save nucleation radii with linear dependance on asperity rad.
+    RinisAlt = np.sort(0.75*radii/4)[::-1] # save nucleation radii with linear dependance on asperity rad.
     
-    DcMap, X0, Y0 = DcMapGenerator(ixmax, DcVals, radii/4) # build asperity map
+    DcMap, X0, Y0, ratioReachedFlag, aspCount = DcMapGenerator(ixmax, DcVals, radii/4, coverRatioLimit) # build asperity map
+    ratioReached.append(ratioReachedFlag)
+    countsReached.append(aspCount+1)
     DcMap = np.transpose(DcMap)
-    if doSave is True:
-        DcMap.tofile("hetero.bin")
-        X0.tofile("X0.bin")
-        Y0.tofile("Y0.bin")
-        Rinis.tofile("Rinis.bin")
-        np.savetxt('magnitudes.txt', artificial_magnitudes_sorted, delimiter=',')
-
-        #file1 = open("hetero.bin", mode="wb")
-        #np.save(file1, DcMap)
-        
-        #file2 = open("X0.bin", mode="wb")
-        #np.save(file2, X0)
-        
-        #file3 = open("Y0.bin", mode="wb")
-        #np.save(file3, Y0)
     
     breakableArea, areaRatio = findBreakableArea(np.array(DcMap), 1000) # how much area do the asperities cover?
     areaRatios.append(areaRatio)
+    
+    histoBins = np.linspace(1, 3.5, 10)
+    histo_mags = np.linspace(np.min(artificial_magnitudes), np.max(artificial_magnitudes), 100)
+    histoLabels = ["magnitude", "N"]
+    histoTitle = 'Magnitude Histogram'
+    
+    if doSave is True:
+        fileIndex = str(iMap+1)
+        if not os.path.isdir(savePath + fileIndex):
+            os.mkdir(savePath + fileIndex)
+        
+        DcMap.tofile(savePath + fileIndex + "/hetero.bin")
+        X0.tofile(savePath + fileIndex + "/X0.bin")
+        Y0.tofile(savePath + fileIndex + "/Y0.bin")
+        Rinis.tofile(savePath + fileIndex + "/Rinis.bin")
+        RinisAlt.tofile(savePath + fileIndex + "/RinisAlt.bin")
+        np.savetxt(savePath + fileIndex + "/asperityCount.txt", [asperityCount], delimiter=',')
+        np.savetxt(savePath + fileIndex + "/magnitudes.txt", artificial_magnitudes_sorted, delimiter=',')
+        
+        ax0 = plotHistoCum(artificial_magnitudes, histoBins, figLabels = histoLabels, figTitle = 'Test: Magnitude exceedance curve \n from radii', bVal = np.round(MLE_artificial_b, 3))
+        ax0.plot(histo_mags, GRlaw(histo_mags))
+        fig0 = ax0.get_figure()
+        fig0.savefig(savePath + fileIndex + "/GRlaw.png")
+        plt.close(fig0)
+        
+        plotContours([DcMap], clims=[0.25, 5.5], cbarLabels=["Dc [mm]"], titles=[f"Asperity count = {aspCount+1}, Area ratio = {round(areaRatio,3)}"], globalTitle="Dc Map")
+        fig1 = plt.gcf()
+        fig1.savefig(savePath + fileIndex + "/DCmap.png")
+        plt.close(fig1)
+
 
 artificialbMean = np.mean(bVals) # calculate means of a, b, coverage over all samples
 artificialbVar = np.var(bVals)
@@ -178,15 +220,17 @@ artificialaVar = np.var(aVals)
 coverageMean = np.mean(areaRatios)
 coverageVar  = np.var(areaRatios)
 
+totalb = MLE_b_value(np.ndarray.flatten(allArtificialMagnitudes), m_c)
+print(f"MLE b estimate over all asperities: {np.round(totalb[0], 3)}")
+
+np.savetxt(savePath + "areaRatios.txt", np.round(areaRatios, 4), fmt='%1.4f')
+np.savetxt(savePath + "bValues.txt", np.round(bVals, 4), fmt='%1.4f')
+
 print(f"Coverage ratio average: {np.round(coverageMean, 3)}")
 print(f"Coverage ratio variance: {np.round(coverageVar, 3)}")
 
 # %% Plots
-
-histoBins = np.linspace(1, 3.5, 10)
-histo_mags = np.linspace(np.min(artificial_magnitudes), np.max(artificial_magnitudes), 100)
-histoLabels = ["magnitude", "N"]
-histoTitle = 'Magnitude Histogram'
+plt.ion()
 
 #fig1, ax1 = plt.subplots()
 #ax1.plot(r, pdf_vals)
@@ -233,4 +277,25 @@ ax0 = plotHistoCum(artificial_magnitudes, histoBins, figLabels = histoLabels, fi
 ax0.plot(histo_mags, GRlaw(histo_mags))
 plt.show()
 
-fig10 = plotContours([DcMap], clims=[0.25, 5.5], cbarLabels=["Dc [mm]"], titles=[f"Asperity count = {len(radii)}, Area ratio = {round(areaRatio,3)}"], globalTitle="Dc Map")
+fig10 = plotContours([DcMap], clims=[0.25, 5.5], cbarLabels=["Dc [mm]"], titles=[f"Asperity count = {aspCount+1}, Area ratio = {round(areaRatio,3)}"], globalTitle="Dc Map")
+
+fig13, ax13 = plt.subplots()
+ax13.scatter(areaRatios, countsReached)
+#ax13.set_xscale("log")
+#ax13.set_yscale("log")
+ax13.set_xlabel("area cover")
+ax13.set_ylabel("asperity counts")
+
+fig11, ax11 = plt.subplots()
+ax11.scatter(areaRatios, bVals)
+#ax11.set_xscale("log")
+#ax11.set_yscale("log")
+ax11.set_xlabel("area coverage")
+ax11.set_ylabel("b-value")
+
+fig12, ax12 = plt.subplots()
+ax12.scatter(countsReached, bVals)
+#ax12.set_xscale("log")
+#ax12.set_yscale("log")
+ax12.set_xlabel("asperity counts")
+ax12.set_ylabel("b-value")
