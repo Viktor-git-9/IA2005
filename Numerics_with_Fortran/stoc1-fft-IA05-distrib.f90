@@ -475,7 +475,7 @@ PROGRAM main
 
                ! Convert to physical outputs
                coef = (0.4)**3*(ds*ns)**2*mu*10.0**9
-               dsreal = 4.d0*ns*ds
+               dsreal = 4.d0*ns*ds 
                dtreal = dsreal/(2.*alpha*1000.)
 
                ! get file tags ready
@@ -517,8 +517,12 @@ PROGRAM main
                filenameMomentrate = savePath1 // 'momentRate_' // trim(isimString) // '.bin'
                filenameMagnitude = savePath1 // 'magnitude_' // trim(isimString) // '.bin'
 
-               call write_real_1DArray_bin(smoment, filenameMoment)
-               call write_real_1DArray_bin(smrate, filenameMomentrate)
+               !call write_real_1DArray_bin(smoment, filenameMoment)
+               !call write_real_1DArray_bin(smrate, filenameMomentrate)
+               !call write_real_1DArray_bin(allMw, filenameMagnitude)
+
+               call write_real_1DArray_bin(smoment*dtreal*dsreal**2*mu*10.0**9, filenameMoment)
+               call write_real_1DArray_bin(smrate*dtreal*dsreal**2*mu*10.0**9, filenameMomentrate)
                call write_real_1DArray_bin(allMw, filenameMagnitude)
 
 !                name3 = dir(1:ndir)//'/output'//num(1:5)//num2(1:1)//'.dat'
