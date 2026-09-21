@@ -62,6 +62,25 @@ def DcMapGenerator(ixmax, DcVals, radii, coverRatioLimit):
     X0 = np.array(X0)
     Y0 = np.array(Y0)
     return DcMap, X0, Y0, ratioReached, irad
+
+def stressFieldGenerator(ixmax, X0, Y0, radii):
+    backgroundVal = 3e6
+    linearStressFunction = lambda r: backgroundVal + 0.5e5 * r
+    stressField = np.zeros((ixmax, ixmax)) + backgroundVal
+    
+    for irad, aspRad in enumerate(radii):
+        #stressVal = rand.normal(backgroundVal, 0.25*backgroundVal)
+        stressVal = linearStressFunction(aspRad)
+        
+        for i in range(int(X0[irad]-aspRad)-1, int(X0[irad]+aspRad)+1, 1):
+            for j in range(int(Y0[irad]-aspRad)-1, int(Y0[irad]+aspRad)+1, 1):
+                rad = np.sqrt((i-X0[irad])**2 + (j-Y0[irad])**2)
+                if rad <= aspRad:
+                    #if stressField[i,j] > stressVal:
+                    stressField[i,j] = stressVal
+                    
+    return stressField
+        
         
 
 # make a cumulative loglog plot of some data
@@ -136,7 +155,8 @@ magnitudes = moment2mag(rad2moment(r)) # magnitudes from these radii
 # %% Draw samples, make maps
 
 doSave = True
-mapCount = 10 # how many samples = maps
+rand.seed(1)
+mapCount = 1 # how many samples = maps
 coverRatioLimit = 1 # target cover ratio
 areaRatios = [] # prepare some lists
 ratioReached = []
@@ -183,6 +203,9 @@ for iMap in range(0, mapCount):
     breakableArea, areaRatio = findBreakableArea(np.array(DcMap), 1000) # how much area do the asperities cover?
     areaRatios.append(areaRatio)
     
+    stressField = stressFieldGenerator(ixmax, X0, Y0, np.sort(radii)[::-1]/4)
+    stressField = np.transpose(stressField)
+    
     histoBins = np.linspace(1, 3.5, 10)
     histo_mags = np.linspace(np.min(artificial_magnitudes), np.max(artificial_magnitudes), 100)
     histoLabels = ["magnitude", "N"]
@@ -194,6 +217,7 @@ for iMap in range(0, mapCount):
             os.mkdir(savePath + fileIndex)
         
         DcMap.tofile(savePath + fileIndex + "/hetero.bin")
+        stressField.tofile(savePath + fileIndex + "/stressField.bin")
         X0.tofile(savePath + fileIndex + "/X0.bin")
         Y0.tofile(savePath + fileIndex + "/Y0.bin")
         Rinis.tofile(savePath + fileIndex + "/Rinis.bin")
@@ -278,6 +302,7 @@ ax0.plot(histo_mags, GRlaw(histo_mags))
 plt.show()
 
 fig10 = plotContours([DcMap], clims=[0.25, 5.5], cbarLabels=["Dc [mm]"], titles=[f"Asperity count = {aspCount+1}, Area ratio = {round(areaRatio,3)}"], globalTitle="Dc Map")
+fig101 = plotContours([stressField], cbarLabels=["Stress"], titles=[f"Asperity count = {aspCount+1}, Area ratio = {round(areaRatio,3)}"], globalTitle="Stress Field")
 
 fig13, ax13 = plt.subplots()
 ax13.scatter(areaRatios, countsReached)
