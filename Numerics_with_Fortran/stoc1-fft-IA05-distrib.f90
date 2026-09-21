@@ -23,7 +23,7 @@ PROGRAM main
      startEndFieldData2, startEndFieldData3, startEndFieldData4 ! I made some new book-keeping arrays, to be written and exported to python
    REAL(8), DIMENSION(:, :), ALLOCATABLE :: tau0, tp, tr, & ! moved dcorg here!
       stress, sigma, w, a, tau, dc, dtau_offset, kernel_testline, &
-      dc_full, dcorg
+      dc_full, dcorg, stressField
    REAL(8), DIMENSION(:), ALLOCATABLE :: x0, y0, rinis, smrate, smoment, allMw, eventMagnitudes
    REAL(8) :: pi, mu, const, facbiem, facfft, &
       tp0, tr0, dc0, t0, dsreal, dtreal, coef, &
@@ -57,7 +57,7 @@ PROGRAM main
    CHARACTER(len=50)  :: isimString, timeStepString
    CHARACTER(len=256) :: inputPath, outputPath
    CHARACTER(len=256) :: filenameMoment, filenameMomentrate, filenameMagnitude, filenameAllMagnitudes, & 
-      filenameHetero, filenameX0, filenameY0, filenameRinis
+      filenameHetero, filenameX0, filenameY0, filenameRinis, filenameStress
 
   nargs = command_argument_count()
   if (nargs < 2) then
@@ -124,7 +124,8 @@ PROGRAM main
    ALLOCATE(tau0(nmax, nmax),     tp(nmax, nmax),   dc(nmax, nmax), &
       stress(nmax, nmax),     tr(nmax, nmax),    a(nmax, nmax), &
       sigma(nmax, nmax),      w(nmax, nmax), &
-      iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), kernel_testline(nmax, nmax) )
+      iv(nmax, nmax),   irup(nmax, nmax),  tau(nmax, nmax), dtau_offset(nmax, nmax), &
+      kernel_testline(nmax, nmax), stressField(nmax, nmax) )
    ALLOCATE( smrate(0:itmx), smoment(0:itmx), allMw(0:itmx) )
    ALLOCATE( dcorg(ixmax, ixmax) )
    ALLOCATE(zdata(ndata1*ndata2), zans(ndata1*ndata2))
@@ -141,6 +142,7 @@ PROGRAM main
    ! to avoid loading the same data multiple times.
    ! Renormalization OFF: instead of generating the asperity map, load it from file
    filenameHetero = trim(inputPath)//"/hetero.bin"
+   filenameStress = trim(inputPath)//"/stressField.bin"
    filenameX0 = trim(inputPath)//"/X0.bin"
    filenameY0 = trim(inputPath)//"/Y0.bin"
    filenameRinis = trim(inputPath)//"/Rinis.bin"
@@ -152,6 +154,11 @@ PROGRAM main
 
    open(unit=19, file=filenameHetero, form="unformatted", access="stream")
    read(19) dc_full
+   close(19)
+   write(*,*) "Loaded asperity map from file."
+
+   open(unit=19, file=filenameHetero, form="unformatted", access="stream")
+   read(19) stressField
    close(19)
    write(*,*) "Loaded asperity map from file."
 
@@ -306,6 +313,8 @@ kernelDiffTime = abs(kernelEndTime(5)*3600 + kernelEndTime(6)*60 + kernelEndTime
 
          call homogeneous_friction(w, tau0, tp, tr, dc, sigma, a, iv, irup, &
             t0, tp0, tr0, ns, ds, rad, nmax, iter, x0(ihypo), y0(ihypo), rinis(ihypo)) ! Hypocenters in center of domain: xhypo, yhypo; Hypocenters moving around: x0(ihypo), y0(ihypo)
+
+         tau0 = stressField ! set background stress to pre-loaded heterogeneous stress field
 
          if( iter.ne.0 ) then ! after first scale stage:
             kmax = itmx
