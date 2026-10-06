@@ -62,7 +62,7 @@ datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/
 #datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/Kram/plot_heterogeneity/data/256/cut_from_center/"
 #datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/4_7_256/heteros/"
 #filename1 = "heterogeneity0_4.bin"
-filename1 = "full_hetero_2_4.bin"
+filename1 = "full_hetero.bin"
 # filename2 = "x0_4_4.bin"
 # filename3 = "y0_4_4.bin"
 #shape1 = [256, 256]
@@ -78,7 +78,9 @@ hetero1 = [loadBinArray(datapath + filename1, shape1)[0:showStop, 0:showStop]]
 # y0  = [loadBinArray(datapath + filename3, shape2)]
 # y0[0] = y0[0] - 1920
 
-fig1 = plotContours(hetero1, clims=[0,4], cbarLabels=["Dc [mm]"], titles=["Density = 4, Scales = 4, n_hypo = 64"], globalTitle="Dc Map")
+breakableInfo = findBreakableArea(hetero1[0], 64)
+
+fig1 = plotContours(hetero1, clims=[0,64], cbarLabels=["Dc [mm]"], titles=[f"Cover ratio: {np.round(breakableInfo[1],3)}"], globalTitle="Legacy Dc Map")
 #plt.scatter(x0[0], y0[0], color='red', s=5, zorder=100)
 ax1 = fig1.axes[0]
 plt.show()
