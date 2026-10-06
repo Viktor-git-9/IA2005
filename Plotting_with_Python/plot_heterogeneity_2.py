@@ -57,19 +57,20 @@ def findBreakableArea(data, backgroundValue):
     
     return breakableArea, areaRatio
 
-#datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/Kram/plot_heterogeneity/data/fullsize_with_different_densities/"
+datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/fullsize_with_different_densities/"
 #datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/Kram/plot_heterogeneity/data/4_4_DcMaps_from_center/"
 #datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/Kram/plot_heterogeneity/data/256/cut_from_center/"
-datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/4_7_256/heteros/"
-filename1 = "heterogeneity0_4.bin"
-#filename1 = "hetero_4_4.bin"
+#datapath = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/plot_heterogeneity/data/4_7_256/heteros/"
+#filename1 = "heterogeneity0_4.bin"
+filename1 = "full_hetero_2_4.bin"
 # filename2 = "x0_4_4.bin"
 # filename3 = "y0_4_4.bin"
-shape1 = [256, 256]
+#shape1 = [256, 256]
+shape1 = [4096, 4096]
 #shape1 = [64, 64]
 shape2 = 64
 
-showStop = 255
+showStop = 4095
 
 hetero1 = [loadBinArray(datapath + filename1, shape1)[0:showStop, 0:showStop]]
 # x0  = [loadBinArray(datapath + filename2, shape2)]

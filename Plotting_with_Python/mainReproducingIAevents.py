@@ -67,7 +67,9 @@ moment2mag  = lambda M: (np.log10(M) - 9.1) / 1.5
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_rupTimes")
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/single_asperities/6_1_single/fieldData")
 #PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_1/corrected_moment_2/data/fieldData")
-PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/data_30/30/fieldData")
+# PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/data_50/50/fieldData")
+PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/single_asperity_stresslevel_test/50m/datafiles/data_5/5/fieldData")
+#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/test/data_2/2/fieldData")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -86,7 +88,7 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "2" # name of selected run
+runName = "1" # name of selected run
 run = runs[runName]
 
 #moment = run.load("moment", scaleIndex)

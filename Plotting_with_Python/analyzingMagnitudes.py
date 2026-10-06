@@ -34,6 +34,17 @@ def MLE_b_value(magnitudes, cutoffMagnitude):
     
     return MLE_b, MLE_a
 
+def MLE_powerlaw_exponent(data, cutoffPoint): # From Clauset, Shahizi and Newman (2009)
+    cutoffData = data[data > cutoffPoint]
+    
+    n = len(cutoffData)
+    sumTerm = np.sum(np.log(cutoffData/(cutoffPoint - 1/2)))
+    alpha = 1 + n / sumTerm
+    
+    alpha_error = (alpha - 1) / np.sqrt(n)
+    
+    return alpha, alpha_error
+
 # ------------------------------------------------------------------
 # Plotting
 # ------------------------------------------------------------------
@@ -96,11 +107,19 @@ def plotHistoCum(data, bins, figLabels = None, figTitle = None, figSubTitle = No
 #dataPath1 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_5/asperityMagnitudes/"
 #dataPath2 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_5/simulationMagnitudes/"
 
-dataPath1 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/infofiles/above10percent/"
-dataPath2 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/above10percent/"
-dataPath_allInfo = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/infofiles/"
+#dataPath1 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/infofiles/above10percent/"
+#dataPath2 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/above10percent/"
+
+dataPath1 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/0923_stresstest/datafiles/data_4/4/"
+dataPath2 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/0923_stresstest/datafiles/data_3/3/"
+
+# dataPath1 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/fieldAnalysis/eventSizes/"
+# dataPath2 = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/fieldAnalysis/eventMoments/"
+
+dataPath_allInfo = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/IA2005/Plotting_with_Python/savedDcMaps/1005/orderedData/"
 m_c = 1.0928
-correctionTerm = 0.12
+#correctionTerm = 0.12
+correctionTerm = 0
 #asperityCount = 5
 mapCount = 10
 
@@ -132,17 +151,21 @@ MLE_estimate_2 = MLE_b_value(dataArray2, m_c)
 b2 = MLE_estimate_2[0]
 a2 = MLE_estimate_2[1]
 
+powerlaw_estimate_1 = MLE_powerlaw_exponent(dataArray1, 10)
+
 GRlaw = lambda m: 10**(-b1*(m-m_c)) # Gutenberg-Richter law
 
 histo_mags = np.linspace(np.min(dataArray1), np.max(dataArray2), 100)
-histoBins = np.linspace(1, 3.5, 10)
-histoLabels = ["magnitude", "N"]
-histoTitle = 'Magnitude Histogram'
+#histoBins = np.linspace(1, 3.5, 10) # for magnitudes
+histoBins = np.linspace(1, 2000, 100) #
+histoLabels = ["eventsize [el. count]", "N"]
+histoTitle = 'Eventsize Histogram'
 plotHistogram(dataArray1, histoBins, figLabels = histoLabels, figTitle = histoTitle)
 
-ax0 = plotHistoCum([dataArray1, dataArray2], histoBins, figLabels = histoLabels, figTitle = 'Magnitude exceedance curve: sparse maps')
+ax0 = plotHistoCum([dataArray1, dataArray2], histoBins, figLabels = histoLabels, figTitle = 'Magnitude exceedance curve: decreasing stress')
 #ax0.plot(histo_mags, GRlaw(histo_mags))
-ax0.legend([f"Predicted, b={np.round(b1, 3)}", f"Simulated, b={np.round(b2, 3)}"])
+ax0.legend([f"Homog. stress, b={np.round(b1, 3)}", f"Dec. stress, b={np.round(b2, 3)}"])
+#ax0.set_xscale('log')
 plt.show()
 
 # fig4, ax4 = plt.subplots()
@@ -158,8 +181,8 @@ fig6, ax6 = plt.subplots()
 fig6.set_size_inches(10,6)
 ax6.scatter(np.sort(dataArray1, axis = None), np.sort(dataArray1, axis = None))
 ax6.scatter(np.sort(dataArray1, axis = None), np.sort(dataArray2, axis = None))
-ax6.legend(["Predicted", "Simulated"])
-ax6.set_title("Predicted vs. simulated magnitudes")
+ax6.legend(["Hom.", "Dec."])
+ax6.set_title("Magnitude comparison")
 ax6.set_xlabel("predicted magnitude")
 ax6.set_ylabel("magnitude")
 plt.grid()
@@ -168,10 +191,10 @@ plt.grid()
 fig5, ax5 = plt.subplots()
 fig5.set_size_inches(10,6)
 sc = ax5.scatter(allAreaRatios, allAsperityCounts, s = 110, c = allbValues, cmap = 'plasma')
-ax5.axvline(0.05)
-ax5.axvline(0.1)
-ax5.axvline(0.15)
-ax5.set_ylim([0, 50])
+# ax5.axvline(0.05)
+# ax5.axvline(0.1)
+# ax5.axvline(0.15)
+ax5.set_ylim([0, 120])
 cbar = plt.colorbar(sc)
 cbar.set_label('b-value')
 ax5.set_xlabel("area cover ratio")
