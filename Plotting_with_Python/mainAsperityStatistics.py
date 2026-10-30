@@ -336,9 +336,10 @@ if __name__ == "__main__":
     #import tempfile
     #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_single"
     #data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/Alex_experiment/2_7_boundary_allowed/lineData"
-    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/data_19/19/lineData"
+    # data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/data_19/19/lineData"
+    data_path = "/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/phase_transition_1016/datafiles/data_20/20/lineData"
 
-    N_STEPS = 15
+    N_STEPS = 102
     SHAPE   = (1501)   # adjust to match your actual array dimensions
 
 

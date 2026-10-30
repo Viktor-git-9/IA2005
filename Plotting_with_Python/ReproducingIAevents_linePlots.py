@@ -4,13 +4,13 @@ from pathlib import Path # import robust path handling
 from loading.runData import runData # import data object
 from loading.variableRegistry import VARIABLES # import variable scheme
 from loading.loaders  import loadParameters # import loading function for run parameters
-from plotting.plotContour import plotContours, plotContour2x2, plotContour2x2plus1 # import plotting functions
+from plotting.plotContour import plotContours # import plotting functions
 from plotting.plotProfiles import getProfiles, plotProfiles, plot2Profiles
 from plotting.plotMesh import plotMeshSlices
 
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/537")
-PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_1/corrected_moment_2/data/fieldData")
+PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/phase_transition_1016/datafiles/data_16/16/fieldData")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -30,9 +30,9 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 stageChangeInd = None # index of move from stage 0 to stage 1
 scaleIndex1 = 0
 scaleIndex2 = 0
-cutOffInd1 = 500
-cutOffInd2 = 500
-runName1 = "1" # names of selected runs
+cutOffInd1 = 1500
+cutOffInd2 = 1500
+runName1 = "11" # names of selected runs
 runName2 = "1"
 correctionFactor = 1
 plotTitle = "Compare rinis"
@@ -51,6 +51,10 @@ magnitude_on = run_on.load("magnitude", scaleIndex1)[0:cutOffInd1]
 moment_off = run_off.load("moment", scaleIndex2)[0:cutOffInd2]
 momentRate_off = run_off.load("momentRate", scaleIndex2)[0:cutOffInd2]
 magnitude_off = run_off.load("magnitude", scaleIndex2)[0:cutOffInd2]
+
+
+### Plot profiles ###
+plotProfiles([momentRate_on], [xlabel1, "Moment Rate [N m / s]"], lineLabels = ["MRF"], globalTitle = "Moment Release Function")
 
 ### Plot moment, moment rate, magnitude ###
 plot2Profiles([moment_on, moment_off*correctionFactor], xlabel_bottom=xlabel1, xlabel_top=xlabel2,

@@ -90,76 +90,52 @@ def plotContours(data, titles=None, cbarLabels=None, clims = None, cmap='inferno
     
     return fig
 
-def plotContour2x2(data1, data2, data3, data4, titles=None, cmap='inferno', globalTitle='none'):
+
+def plotSingleContour(arr, title=None, cbarLabel=None, clims=None, cmap='inferno', globalTitle='none'):
     """
-    Plot four 2D arrays in a 2x2 grid with individual colorbars.
+    Plot a single 2D array as an image/contour plot with a colorbar.
 
     Parameters
     ----------
-    A, B, C, D : 2D numpy arrays
-        Arrays of identical shape.
-    titles : list of str, optional
-        A list of four titles for the subplots.
+    arr : 2D numpy array
+    title : str, optional
+    cbarLabel : str, optional
+    clims : tuple (vmin, vmax), optional
     cmap : str
-        Matplotlib colormap name (default 'viridis').
+    globalTitle : str
     """
-    
-    if titles is None:
-        titles = ["A", "B", "C", "D"]
-        
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    arrays = [data1, data2, data3, data4]
-    
-    for ax, arr, title in zip(axes.ravel(), arrays, titles):
-        im = ax.imshow(arr.T, cmap=cmap, origin='lower', aspect='auto')
-        
-        ax.set_title(title)
-        plt.colorbar(im, ax=ax)
-        
-    if globalTitle is not None:
-        fig.suptitle(globalTitle, fontsize=16)
-        
-    fig.supxlabel("x [element counts]")
-    fig.supylabel("y [element counts]")
-    plt.tight_layout()
-    plt.show()
-    
-def plotContour2x2plus1(data1, data2, data3, data4, data5=None, titles=None, cmap='inferno', globalTitle='none'):
-    """
-    Plot four 2D arrays in a 2x2 grid with individual colorbars.
 
-    Parameters
-    ----------
-    A, B, C, D : 2D numpy arrays
-        Arrays of identical shape.
-    titles : list of str, optional
-        A list of four titles for the subplots.
-    cmap : str
-        Matplotlib colormap name (default 'viridis').
-    """
-    
-    if titles is None:
-        titles = ["A", "B", "C", "D", "E"]
-        
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    arrays = [data1, data2, data3, data4]
-    
-    for ax, arr, title in zip(axes.ravel(), arrays, titles):
-        im = ax.imshow(arr.T, cmap=cmap, origin='lower', aspect='auto')
-        
-        ax.set_title(title)
-        plt.colorbar(im, ax=ax)
-    
-    if data5 is not None:
-        extraax = fig.add_axes([1.05, 0.26, 0.4, 0.4])
-        extraim = extraax.imshow(data5, cmap=cmap, origin='lower', aspect='auto')
-        extraax.set_title(titles[-1])
-        plt.colorbar(extraim, ax=extraax)
-        
-    if globalTitle is not None:
+    if arr.ndim != 2:
+        raise ValueError("Input array must be 2D.")
+
+    if title is None:
+        title = "Array"
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+
+    # plot
+    if clims is not None:
+        im = ax.imshow(arr.T, cmap=cmap, vmin=clims[0], vmax=clims[1], origin='lower')
+    else:
+        im = ax.imshow(arr.T, cmap=cmap, origin='lower')
+
+    ax.set_aspect('equal')
+    ax.set_title(title)
+    ax.set_xlabel("x [element counts]")
+    ax.set_ylabel("y [element counts]")
+
+    # colorbar matched to the axes height
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cbar = fig.colorbar(im, cax=cax, format='%.0e')
+    if cbarLabel is not None:
+        cbar.set_label(cbarLabel)
+
+    # global title
+    if globalTitle != 'none':
         fig.suptitle(globalTitle, fontsize=16)
-        
-    fig.supxlabel("x [element counts]")
-    fig.supylabel("y [element counts]")
-    plt.tight_layout()
-    plt.show() 
+
+    fig.tight_layout()
+
+    return fig
+    

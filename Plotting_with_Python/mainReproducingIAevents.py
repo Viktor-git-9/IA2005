@@ -4,8 +4,8 @@ from pathlib import Path # import robust path handling
 from loading.runData import runData # import data object
 from loading.variableRegistry import VARIABLES # import variable scheme
 from loading.loaders  import loadParameters # import loading function for run parameters
-from plotting.plotContour import plotContours, plotContour2x2, plotContour2x2plus1 # import plotting functions
-from plotting.plotProfiles import getProfiles, plotProfiles2x2, plotProfiles2x2plus1, plotProfiles
+from plotting.plotContour import plotContours, plotSingleContour # import plotting functions
+from plotting.plotProfiles import getProfiles, plotProfiles
 from plotting.plotMesh import plotMeshSlices
 import scipy.integrate as integrate
 
@@ -61,15 +61,13 @@ def compareSlipProfile(slipProfile, deltaSigma, mu, a):
 moment2mag  = lambda M: (np.log10(M) - 9.1) / 1.5
     
 
-
-#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/homogeneous_dcmap/")
-#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/reproducing_IA_events/6_4_event116/")
-#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/6_4_1000_rupTimes")
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/single_asperities/6_1_single/fieldData")
 #PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/9Maps_1/corrected_moment_2/data/fieldData")
-# PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/3_bins_5_15_25_35_50/datafiles/data_50/50/fieldData")
-PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/single_asperity_stresslevel_test/50m/datafiles/data_5/5/fieldData")
+# PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/1006/100asps_Rinis/datafiles/data_4/4/fieldData")
+PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/phase_transition_1016/datafiles/data_20/20/fieldData")
+#PROJECTROOT  = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/single_asperity_stresslevel_test/20m/datafiles/data_5/5/fieldData")
 #PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/test/data_2/2/fieldData")
+#PROJECTROOT = Path("/home/viktor/Dokumente/Doktor/ENS_BRGM/Code/data/asperity_statistics/smooth_distributions/1006/200asps_4point9MPa_Rinis/datafiles/data_3/3/fieldData")
 RUNSDIR     = PROJECTROOT / "runs" # path to directory containing all runs
 
 runs = {} # prepare dictionary to hold all runs
@@ -88,7 +86,7 @@ for runDir in RUNSDIR.iterdir(): # iterates over all runs in the RUNSDIR directo
 
 ### contour plots of specified run at specified time
 scaleIndex = 0
-runName = "1" # name of selected run
+runName = "17" # name of selected run
 run = runs[runName]
 
 #moment = run.load("moment", scaleIndex)
@@ -100,12 +98,12 @@ run = runs[runName]
 #plotTimeSteps = [300, 400, 500] #  for stage 1 nrn
 #plotTimeSteps = [75, 100, 125] # for stage 1 rn
 #plotTimeSteps = [10, 15, 20, 200]
-#plotTimeSteps = [0, 1]
-plotTimeSteps = [1]
+plotTimeSteps = [0, 1]
+#plotTimeSteps = [1]
 #plotTimeSteps = [10, 500, 750, 1000]
 #timeStepLabels = [f"{v}dt" for v in plotTimeSteps]
-#timeStepLabels = ["Simulation start", "Simulation stop"]
-timeStepLabels = ["Simulation stop"]
+timeStepLabels = ["Simulation start", "Simulation stop"]
+#timeStepLabels = ["Simulation stop"]
 cbarLabels_rupTimes = ["Rupture times [dt]"] * len(plotTimeSteps)
 cbarLabels_slipHis = ["Accumulated slip [m]"] * len(plotTimeSteps)
 cbarLabels_slipVelo = ["Slip velo. [m/s]"] * len(plotTimeSteps)
@@ -134,6 +132,10 @@ plotContours(temp_rupTimes, timeStepLabels, cbarLabels_rupTimes, globalTitle = "
 plotContours(temp_slipHis, timeStepLabels, cbarLabels_slipHis, globalTitle="Accumulated Slip for a large event")
 #plotContours(temp_slipVelo, timeStepLabels, cbarLabels_slipVelo, clims=[0, 0.1], globalTitle="Slip velo. for large event " + runName) 
 plotContours(temp_onPlaneStress, timeStepLabels, cbarLabels_stress, globalTitle=f"Onplane Stress for large event {runName}", clims=[0, 6])
+
+plotSingleContour(temp_rupTimes[1], title="Rupture times", cbarLabel="Rup. times [dt]", clims=None, cmap='inferno', globalTitle='none')
+plotSingleContour(temp_slipHis[1], title="Accumulated Slip", cbarLabel="Slip [m]", clims=None, cmap='inferno', globalTitle='none')
+plotSingleContour(temp_onPlaneStress[1], title="Stress", cbarLabel="Stress [MPa]", clims=[0,5], cmap='inferno', globalTitle='none')
 
 ### plot Dc heterogeneity ###
 #heterogeneity = run.load("heterogeneity", scaleIndex, iTime)
